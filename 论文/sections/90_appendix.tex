@@ -1,0 +1,306 @@
+%!TEX root = ../main.tex
+% =============================================================================
+%  附录（格式规范第四条：页数不限，必须打印并与正文装订在一起提交）
+%  附录必备八项（依据 format2026.doc 第五条、第十一条）：
+%    1 支撑材料文件列表        -> 附录 A  ← 必需
+%    2 全部完整、可运行的源程序 -> 附录 E  ← 缺少可能被取消评奖资格
+%    3 运行环境与依赖版本      -> 附录 B
+%    4 运行说明               -> 附录 B
+%    5 随机种子清单            -> 附录 H
+%    6 结果文件与论文表格对应表 -> 附录 C
+%    7 数据字典               -> 附录 F
+%    8 较长的推导              -> 附录 G
+%  ⚠️ 若确实没有用到程序，须写明"本论文没有用到程序"（第五条）
+%  ⚠️ 若确实没有支撑材料，须注明"本论文没有支撑材料"（第十一条）
+%  ⚠️ 附录中同样不得出现学校、队号、姓名、赛区信息（第六条）
+% =============================================================================
+
+\section{支撑材料文件列表}
+
+本论文的支撑材料压缩包（\texttt{support.zip}，不超过 20~MB）内容如下，
+文件列表与压缩包逐项对应（格式规范第十一条）。
+
+\begin{lstlisting}[style=plain,basicstyle=\ttfamily\footnotesize\songti]
+support.zip
++-- README.md                     复现说明（运行顺序、预期耗时、输出清单）
++-- requirements.txt              依赖清单（锁定确切版本号）
++-- code/                         全部源程序（与附录 E 一致）
+|   +-- config.py                 口径与参数（全文唯一来源）
+|   +-- data_loader.py            附件读取 + 时标对齐 + 断言
+|   +-- model_q1.py               问题 1 模型
+|   +-- model_q2.py               问题 2 模型（两阶段随机规划）
+|   +-- model_q3.py               问题 3 模型（多阶段滚动）
+|   +-- model_q4.py               问题 4 模型（波动电价 + 风险度量）
+|   +-- scenario_gen.py           场景生成、削减与保真检验
+|   +-- certify.py                最优性证书（阈值律与互补松弛校验）
+|   +-- audit.py                  独立复算费用与物理量（不共用建模费用函数）
+|   +-- run_all.py                一键复现全部结果
+|   `-- plot_fig01..fig10.py      十张图的生成脚本
++-- result/                       五个结果文件
+|   +-- result1.xlsx  result2.xlsx  result3.xlsx
+|   `-- result4-2.xlsx  result4-3.xlsx
++-- figures/                      全部图（矢量 PDF）
++-- intermediate/                 中间结果（场景集 .npz、扫描结果、审计日志）
+|   +-- scenarios.npz             固定场景集（消融与 VoI 共用）
+|   +-- audit_report.md           审计报告全文（附录 D）
+|   `-- paper_numbers.json        论文关键数字，供一致性对拍
+`-- results_summary.json          一键复现摘要
+\end{lstlisting}
+
+\section{运行环境与运行说明}
+
+\paragraph{运行环境}
+
+\begin{table}[htbp]
+  \centering
+  \caption{运行环境与依赖版本（版本必须锁定，不写区间）}
+  \label{tab:env}
+  \footnotesize
+  \begin{tabularx}{\linewidth}{L{4.0cm} L{4.4cm} Y}
+    \toprule
+    项目 & 版本 & 说明 \\
+    \midrule
+    操作系统 & \ph & 复现所用系统 \\
+    Python & \ph & --- \\
+    NumPy / pandas & \ph / \ph & 数据处理 \\
+    SciPy & \ph & 线性规划（\texttt{linprog}）或调用求解器 \\
+    求解器 & \ph & 名称与版本号 \\
+    Matplotlib & \ph & 出图（中文字体 \ph） \\
+    openpyxl & \ph & 结果文件读写 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\paragraph{运行说明}
+
+\begin{enumerate}
+  \item 解压 \texttt{support.zip}，在根目录执行
+        \texttt{pip install -r requirements.txt}（版本已锁定）；
+  \item 确认原始附件放在 \texttt{data/} 目录下（附件 1--4）；
+  \item 执行 \texttt{python code/run\_all.py}，脚本将依次完成：
+        读取附件并校准时标 \(\rightarrow\) 生成并固定场景集 \(\rightarrow\)
+        依次求解问题 1--4 \(\rightarrow\) 写出五个结果文件 \(\rightarrow\)
+        运行独立审计 \(\rightarrow\) 生成十张图 \(\rightarrow\) 写出 \texttt{results\_summary.json}；
+  \item \textbf{预期运行时间}：\ph（其中场景生成与问题 3 的多阶段求解占比最大）；
+  \item \textbf{输出文件}：问题 1--3 的结果文件 \texttt{result1.xlsx}、
+        \texttt{result2.xlsx}、\texttt{result3.xlsx}；
+        问题 4 的结果文件 \texttt{result4-2.xlsx}、\texttt{result4-3.xlsx}；
+        \texttt{figures/} 下的十张矢量 PDF；
+        审计报告 \texttt{audit\_report.md}；复现摘要 \texttt{results\_summary.json}；
+  \item 一致性自检：在 \texttt{code/} 目录下执行
+        \texttt{python audit.py} 并加上 \texttt{check-paper} 参数，
+        脚本将把 \texttt{paper\_numbers.json} 中的论文数字与代码复算结果对拍，
+        不一致即抛出异常。
+\end{enumerate}
+
+\begin{guideblock}
+"预期运行时间"必须写实数并实测过。附录代码缺文件、跑不通、
+或运行结果与论文不符，都可能被取消评奖资格（格式规范第五条）——
+提交前请\textbf{从干净环境完整跑一次} \texttt{run\_all.py}，逐项核对输出与论文数字。
+\end{guideblock}
+
+\section{结果文件与论文表格的对应表}
+
+\begin{table}[htbp]
+  \centering
+  \caption{结果文件 \(\leftrightarrow\) 论文表格 \(\leftrightarrow\) 生成函数 对应表}
+  \label{tab:filemap}
+  \footnotesize
+  \begin{tabularx}{\linewidth}{L{2.8cm} L{2.8cm} L{3.6cm} Y}
+    \toprule
+    结果文件（工作表） & 论文位置 & 生成函数 & 备注 \\
+    \midrule
+    result1.xlsx（计划购电量） & 表~\ref{tab:q1-buy} & \texttt{run\_q1()} & 144 个数据行 \\
+    result1.xlsx（充放电量） & 表~\ref{tab:q1-soc} & \texttt{run\_q1()} & 6 个时段行 + \(0{:}00\)/\(24{:}00\) 储电量 \\
+    result2.xlsx（计划购电量） & 表~\ref{tab:q2-tables} & \texttt{run\_q2()} & 334 行 \(\times\) 147 列 \\
+    result2.xlsx（充放电量） & 表~\ref{tab:q2-tables} & \texttt{run\_q2()} & 每天 6 行 \\
+    result2.xlsx（紧急购电量） & 表~\ref{tab:q2-emergency} & \texttt{run\_q2()} & 同日可多行 \\
+    result3.xlsx（计划/调整购电量） & 表~\ref{tab:q3-tables} & \texttt{run\_q3()} & 调整量依据 \(6/12/18\) 时预报 \\
+    result3.xlsx（充放电量/紧急购电量） & 表~\ref{tab:q3-tables} & \texttt{run\_q3()} & 最终值 \\
+    result4-2.xlsx & 第八章 & \texttt{run\_q4\_variant(2)} & 波动电价下问题 2 \\
+    result4-3.xlsx & 第八章 & \texttt{run\_q4\_variant(3)} & 波动电价下问题 3 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\section{独立审计报告}
+
+审计由\textbf{非建模实现者}独立完成：只读原始附件与本队结果文件，
+\textbf{不共用建模代码的费用函数}，以保证"自证循环"不会发生。
+
+\begin{lstlisting}[style=plain,basicstyle=\ttfamily\footnotesize\songti]
+audit_report.md（节选）
+
+[环境]    Python 3.x / 依赖版本见 requirements.txt
+[输入]    data/附件1..4.xlsx；result/result1..result4-3.xlsx
+[窗口]    2025-02-01 .. 2025-12-31（334 天）
+
+A1  功率/电量平衡残差   max = ________ kWh   阈值 1e-6   [ PASS / FAIL ]
+A2  储电量递推残差      max = ________ kWh   阈值 1e-6   [ PASS / FAIL ]
+A3  储电量越界数        n   = ________       阈值 0      [ PASS / FAIL ]
+A4  充放电功率越界数    n   = ________       阈值 0      [ PASS / FAIL ]
+A5  充放互斥违反数      n   = ________       阈值 0      [ PASS / FAIL ]
+A6  周期/终端条件       问题1 S0-S144 = ____ kWh         [ PASS / FAIL ]
+A7  非负性违反数        n   = ________                   [ PASS / FAIL ]
+A8  费用复算相对误差    err = ________       阈值 1e-4   [ PASS / FAIL ]
+A9  日期与结构          334 天 / 工作表名与列序一致       [ PASS / FAIL ]
+A10 全天汇总列一致性    相对误差 = ______  阈值 1e-4     [ PASS / FAIL ]
+
+结论（只勾一项）：
+  [ ] 全部通过，可进入写作
+  [ ] 存在失败项，已定位并修正（见下方定位记录）
+\end{lstlisting}
+
+\section{源程序清单}
+
+以下为本论文建模、求解、绘图与审计所用的全部源程序（格式规范第五条）。
+将源程序放入 \texttt{code/} 目录后，本附录会自动原样引入文件内容。
+
+\codefile{config.py}
+\codefile{data_loader.py}
+\codefile{model_q1.py}
+\codefile{model_q2.py}
+\codefile{model_q3.py}
+\codefile{model_q4.py}
+\codefile{scenario_gen.py}
+\codefile{certify.py}
+\codefile{audit.py}
+\codefile{run_all.py}
+\codefile{requirements.txt}
+\codefile[plain]{plot_fig03_dual.py}
+\codefile[plain]{plot_fig05_waterfall.py}
+\codefile[plain]{plot_fig06_voi.py}
+\codefile[plain]{plot_fig07_ablation.py}
+\codefile[plain]{plot_fig08_frontier.py}
+\codefile[plain]{plot_fig09_forecast_error.py}
+\codefile[plain]{plot_fig10_mechanism.py}
+
+\begin{guideblock}
+附录放\textbf{可复制的纯文本源码}，\textbf{不要用截图}，也不要放空壳函数。
+每张图都要在附录说明由哪个脚本生成；本模板已按此列出，
+请把实际文件名与本队脚本名对齐（不一致会导致"论文与代码不符"）。
+\end{guideblock}
+
+\section{数据字典}
+
+\begin{table}[htbp]
+  \centering
+  \caption{附件字段、单位与时标约定}
+  \label{tab:datadict}
+  \footnotesize
+  \begin{tabularx}{\linewidth}{C{1.4cm} L{3.0cm} C{1.6cm} C{2.4cm} Y}
+    \toprule
+    附件 & 字段 & 单位 & 时间范围 & 时标约定 \\
+    \midrule
+    附件 1 & 电价 & 元/kWh & 一天（144 时段） & 标签 = 时段末端；\(0{:}00{+}1\) 表示次日 \(0{:}00\)（当日 \(24{:}00\)） \\
+    附件 1 & 小区负载 & kW & 同上 & 同上 \\
+    附件 1 & 光伏发电"预测"功率 & kW & 同上 & \textbf{实为附件 2 全年逐时段均值，不是预报}（§3.3） \\
+    附件 2 & 小区负载 & kW & 2025-01-01 至 12-31 & 365 行 \(\times\) 144 列，同上 \\
+    附件 2 & 光伏发电实际功率 & kW & 同上 & 同上 \\
+    附件 3 & 光伏发电预报 & kW & 同上 & 每天 \(0/6/12/18\) 时发布，预报 \(k\) 小时对应 \((h_0+k-1,\ h_0+k]\) \\
+    附件 4 & 电价 & 元/kWh & 同上 & 365 行 \(\times\) 144 列，标签 = 时段末端 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\section{长推导}
+
+\subsection{对偶推导与阈值律}
+
+记式~\eqref{eq:q1-balance} 的乘子为 \(\alpha_t\)、式~\eqref{eq:q1-soc} 的乘子为 \(\mu_t\)，
+储电量上下界乘子为 \(\lambda^{\pm}_t\ge 0\)，充放电功率界乘子为 \(\nu^{c}_t,\nu^{d}_t\ge 0\)。
+拉格朗日函数为
+
+\begin{equation}
+  \begin{aligned}
+    \mathcal L=\ &\sum_{t}p_tE_t
+    +\sum_{t}\alpha_t\Bigl[E_t+(PV_t-L_t)\Delta t+d_t-c_t-s_t\Bigr]\\
+    &+\sum_{t}\mu_t\Bigl[S_t-S_{t-1}-\eta_cc_t+\frac{d_t}{\eta_d}\Bigr]
+    +\sum_{t}\lambda^{+}_t\bigl[S_t-\overline S\bigr]
+    +\sum_{t}\lambda^{-}_t\bigl[\underline S-S_t\bigr]\\
+    &+\sum_{t}\nu^{c}_t\bigl[c_t-\overline P\Delta t\bigr]
+    +\sum_{t}\nu^{d}_t\bigl[d_t-\overline P\Delta t\bigr]
+  \end{aligned}
+  \label{eq:app-lag}
+\end{equation}
+
+对各决策变量求平稳性条件（\(t=1,\dots,143\)）：
+
+\begin{align}
+  \frac{\partial\mathcal L}{\partial E_t}&=p_t+\alpha_t\ \ge 0,
+  &E_t\bigl(p_t+\alpha_t\bigr)&=0 \label{eq:app-stat-E}\\
+  \frac{\partial\mathcal L}{\partial s_t}&=-\alpha_t\ \ge 0,
+  &s_t\,\alpha_t&=0 \label{eq:app-stat-s}\\
+  \frac{\partial\mathcal L}{\partial c_t}&=-\alpha_t-\eta_c\mu_t+\nu^{c}_t\ \ge 0,
+  &c_t\bigl(-\alpha_t-\eta_c\mu_t+\nu^{c}_t\bigr)&=0 \label{eq:app-stat-c}\\
+  \frac{\partial\mathcal L}{\partial d_t}&=\alpha_t+\frac{\mu_t}{\eta_d}+\nu^{d}_t\ \ge 0,
+  &d_t\Bigl(\alpha_t+\frac{\mu_t}{\eta_d}+\nu^{d}_t\Bigr)&=0 \label{eq:app-stat-d}\\
+  \frac{\partial\mathcal L}{\partial S_t}&=\mu_t-\mu_{t+1}+\lambda^{+}_t-\lambda^{-}_t=0
+  \label{eq:app-stat-S}
+\end{align}
+
+在正常购电时段 \(E_t>0\)，由式~\eqref{eq:app-stat-E} 得 \(\alpha_t=-p_t\)；
+若充放电功率界均不活跃（\(\nu^{c}_t=\nu^{d}_t=0\)），
+则式~\eqref{eq:app-stat-c}、\eqref{eq:app-stat-d} 化为
+
+\begin{equation}
+  p_t-\eta_c\mu_t\ \ge 0,\qquad
+  -p_t+\frac{\mu_t}{\eta_d}\ \ge 0
+  \label{eq:app-threshold-raw}
+\end{equation}
+
+且 \(c_t>0\) 时前式取等、\(d_t>0\) 时后式取等，即得正文命题~\ref{prop:threshold}
+的阈值律与死区式~\eqref{eq:q1-deadband}。
+由式~\eqref{eq:app-stat-S} 还可得水价值的跨期关系：
+在储电量上下界均不活跃的连续时段上 \(\mu_t=\mu_{t+1}\)（水价值恒定）；
+储电量触及上界时 \(\lambda^{+}_t>0\)、\(\mu_t<\mu_{t+1}\)；
+触及下界时 \(\lambda^{-}_t>0\)、\(\mu_t>\mu_{t+1}\)。
+这一关系是图~\ref{fig:watervalue} 中水价值曲线出现折点的原因。
+
+\subsection{报童临界分位数的推导}
+
+设时段 \(t\) 的需求 \(D_t\) 为随机变量，分布函数为 \(F_t\)，
+计划购电量 \(E_t\)，缺货成本 \(c_u\)（不足 1~kWh 的额外支出）、
+过剩成本 \(c_o\)（多买 1~kWh 的损失）。期望总成本为
+
+\begin{equation}
+  \Pi(E)=c_u\,\mathbb E\bigl[(D-E)^{+}\bigr]+c_o\,\mathbb E\bigl[(E-D)^{+}\bigr]
+  \label{eq:app-nv-cost}
+\end{equation}
+
+对 \(E\) 求导并令其为零：
+
+\begin{equation}
+  \frac{\mathrm d\Pi}{\mathrm dE}
+  =-c_u\bigl[1-F(E)\bigr]+c_oF(E)=0
+  \quad\Longrightarrow\quad
+  F(E^{*})=\frac{c_u}{c_u+c_o}
+  \label{eq:app-nv-foc}
+\end{equation}
+
+本题中不足 1~kWh 需按 \(5p_t\) 紧急购电而正常电价为 \(p_t\)，
+故 \(c_u=5p_t-p_t=4p_t\)；
+当过剩电量完全浪费时 \(c_o=p_t\)，得 \(F(E^{*})=4/5=0.8\)；
+当过剩电量可部分回收（单位回收价值 \(r_t\)）时 \(c_o=p_t-r_t\)，
+临界分位数相应上移。此即正文式~\eqref{eq:q2-newsvendor} 与表~\ref{tab:newsvendor} 的来源。
+
+\section{随机种子清单}
+
+\begin{table}[htbp]
+  \centering
+  \caption{随机种子清单（统计部分不少于 20 个种子，报告均值 \(\pm\) 标准差与 95\% 置信区间）}
+  \label{tab:seeds}
+  \footnotesize
+  \begin{tabularx}{\linewidth}{L{3.6cm} L{3.0cm} C{2.6cm} Y}
+    \toprule
+    用途 & 随机机制 & 种子 & 说明 \\
+    \midrule
+    场景生成 & 分块 Bootstrap & \ph & \(N'=\ph\) 个场景，一次生成后存盘固定 \\
+    场景削减 & \(k\)-means 初始化 & \ph & 固定初始化以保证可复现 \\
+    消融实验 & 读同一份场景集 & 不重新抽样 & 公平性铁律 \\
+    VoI 实验 & 读同一份场景集 & 不重新抽样 & 与消融同源 \\
+    多种子稳健性 & 20 个种子 & \ph & 均值 \(\pm\) 标准差 + 95\% CI \\
+    样本外回测 & 固定切分 & 不适用 & 测试窗口 2025-10-01 至 12-31 未参与调参 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}

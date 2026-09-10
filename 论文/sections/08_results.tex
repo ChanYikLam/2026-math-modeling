@@ -1,0 +1,204 @@
+%!TEX root = ../main.tex
+% =============================================================================
+%  八、结果与分析                建议 4–5 页
+%  评审在问：数对不对？有没有解释？
+%  本节必须出现：① 表 1/2/3 结果  ② 四问结果表
+%                ③ 成本分解瀑布图（fig05，必须叠加基线口径）
+%                ④ 四项费用分解与对偶图  ⑤ 策略机制解释图
+%  红线：本节每一个数值都必须与 result*.xlsx \textbf{逐格一致}。
+% =============================================================================
+
+\section{结果与分析}
+
+\subsection{指标口径表}
+
+\begin{guideblock}
+论文最常见的失分点不是算错，而是\textbf{口径不清}：
+"节省 \ph" 是相对谁？"全天购电量"含不含储能充电？"购电费"含不含紧急购电？
+全文只有一份口径定义源（\texttt{config.py}），
+论文中任何费用数字只能来自 \texttt{cost\_breakdown()}。
+本节把八个核心指标的口径集中成一页，正文引用口径编号即可。
+\end{guideblock}
+
+\begin{caliber}{C-02}{全天购电量}
+\textbf{定义}\quad \(E^{\text{day}}=\sum_{t=1}^{144}E_t\)，即 144 个时段的\textbf{计划购电量}之和；%
+\textbf{数据}\quad result1/2/3/4-* 中"计划购电量"工作表的逐时段列；%
+\textbf{时段}\quad 问题 1：典型日；问题 2--4：2025-02-01 至 12-31 的每一天；%
+\textbf{单位}\quad kWh（保留 3 位小数）；%
+\textbf{含}\quad \textbf{含}调整后的购电量（问题 3、4 中按调整后口径统计时须单独命名）；%
+\textbf{不含}\quad \textbf{不}含储能充电量、不含紧急购电量；%
+\textbf{对照}\quad 若把紧急购电量计入，同一日数值为 \ph~kWh，相差 \ph；%
+\textbf{复算}\quad \texttt{audit.py::daily\_purchase\_energy(...)}
+\end{caliber}
+
+\begin{caliber}{C-03}{总购电费用}
+\textbf{定义}\quad \(C^{\text{total}}=C^{\text{plan}}+C^{\text{over}}+C^{\text{penalty}}%
+        +C^{\text{emergency}}\)，%
+        其中 \(C^{\text{plan}}\) 为计划购电费，\(C^{\text{over}},C^{\text{penalty}}\)%
+        分别为调整超额（\(1.5p\)）与违约（\(0.5p\)）相关费用，%
+        \(C^{\text{emergency}}\) 为紧急购电费（\(5p\)）；%
+\textbf{数据}\quad 电价取附件 1（问题 1--3）或附件 4（问题 4）；电量取本队结果文件；%
+\textbf{时段}\quad 问题 1：典型日；问题 2--4：334 天；%
+\textbf{单位}\quad 元（保留 2 位小数；内部计算不取整）；%
+\textbf{不含}\quad 储能投资与运维成本、容量补偿、辅助服务收益、绿电环境价值；%
+\textbf{对照}\quad 不含紧急购电的口径下同一量为 \ph~元，相差 \ph；%
+\textbf{复算}\quad \texttt{audit.py::cost\_breakdown(...)}，四项之和须与目标值偏差 \(<10^{-6}\) 元
+\end{caliber}
+
+\begin{caliber}{C-04}{节省率}
+\textbf{定义}\quad \(\eta=\bigl(C^{base}-C^{\text{total}}\bigr)/C^{base}\times 100\%\)；%
+\textbf{数据}\quad \(C^{base}\) 取 \calref{C-01}，且必须写明是 V1/V2/V3 中的哪一个变体；%
+\textbf{单位}\quad \%（保留 2 位小数）；%
+\textbf{不含}\quad 不得相对"贪心"或"完美信息"基线报同一个数而不加限定；%
+        相对其他基线的结果必须\textbf{单独命名}；%
+\textbf{对照}\quad 相对无储能基线 \ph；相对完美信息下界差 \ph；%
+\textbf{复算}\quad \texttt{audit.py::saving\_rate(baseline='C-01-V2')}
+\end{caliber}
+
+\begin{caliber}{C-06}{弃光电量}
+\textbf{定义}\quad \(S^{\text{cur}}=\sum_{t}s_t\)（按\textbf{电量} kWh 而非功率 kW 统计）；%
+\textbf{数据}\quad 由式~\eqref{eq:q1-balance} 的平衡残差确定；非负；%
+\textbf{单位}\quad kWh（保留 3 位小数）；%
+\textbf{上界}\quad 不超过盈余电量 \(\sum_t\max\{(PV_t-L_t)\Delta t-c_t,0\}\)；%
+\textbf{不含}\quad 不含储能充电被限制而"未发生的充电"；%
+\textbf{对照}\quad 典型日最优弃光 \ph~kWh；实际日期序列上弃光 \ph~kWh，出现在 \ph~个时段；%
+\textbf{复算}\quad \texttt{audit.py::curtailment(...)}
+\end{caliber}
+
+\begin{guideblock}
+弃光量为 0 或被隐藏都会减分——\textbf{报告弃光量是专业性的体现，不是失败}。
+典型日弃光为 0 要解释清楚原因（盈余总量与峰值盈余均低于储能可用摆幅与充电上限），
+并说明弃光变量对\textbf{极端日可行性}仍然必需。
+\end{guideblock}
+
+\begin{caliber}{C-07}{充放电量口径}
+\textbf{定义}\quad 结果文件中 \(c_t,d_t\) 为\textbf{交流侧（AC）}电量，%
+        即并网点处计量的充放电量；储电量递推使用式~\eqref{eq:q1-soc}，%
+        充电乘 \(\eta_c\)、放电\textbf{除} \(\eta_d\)；%
+\textbf{数据}\quad 本队结果文件"充放电量"工作表；%
+\textbf{单位}\quad kWh（保留 3 位小数）；%
+\textbf{不含}\quad 不含电池侧（DC）电量；如需 DC 口径须显式换算并单独命名；%
+\textbf{对照}\quad DC 口径下套利收益为 \ph~元，与 AC 口径相差 \ph；%
+\textbf{复算}\quad \texttt{audit.py::charge\_discharge(...)}，%
+        并断言 \(E^{\text{dis}}/E^{\text{chg}}\approx\eta_c\eta_d=0.81\)
+\end{caliber}
+
+\begin{caliber}{C-08}{储电量与预报误差}
+\textbf{定义}\quad \(S_t\) 为\textbf{时段末}储电量；问题 1 要求 \(S_0=S_{144}=6000\)~kWh；%
+        跨日连续递推（\(S_{d,0}=S_{d-1,144}\)）；%
+\textbf{数据}\quad 附件 1/2；储电量窗口 \([1200,10800]\)~kWh（对应 10\%--90\% DOD）；%
+\textbf{单位}\quad kWh（保留 3 位小数）；%
+\textbf{不含}\quad 不含自放电与循环衰减（假设 A4）；%
+\textbf{预报误差}\quad MAE 分母与筛选条件已声明：白天口径为"实际功率 \(>100\)~kW"，%
+        样本量 \(n=\ph\)；%
+\textbf{复算}\quad \texttt{audit.py::soc\_audit(...)}，越界数须为 0
+\end{caliber}
+
+\subsection{四问结果的汇总与对照}
+
+\begin{table}[htbp]
+  \centering
+  \caption{四问主要结果汇总（同一 \(C^{base}\) 口径 \calref{C-01}；费用单位：元，电量单位：kWh）}
+  \label{tab:summary}
+  \footnotesize
+  \setlength{\tabcolsep}{5pt}
+  \begin{tabularx}{\linewidth}{L{2.6cm} C{2.4cm} C{2.4cm} C{2.4cm} Y}
+    \toprule
+    指标 & 问题 1 & 问题 2 & 问题 3 & 问题 4 \\
+    \midrule
+    计划购电量 & \ph & \ph & \ph & \ph \\
+    充电量 & \ph & \ph & \ph & \ph \\
+    放电量 & \ph & \ph & \ph & \ph \\
+    紧急购电量 & --- & \ph & \ph & \ph \\
+    弃光电量 & \ph & \ph & \ph & \ph \\
+    计划购电费 & \ph & \ph & \ph & \ph \\
+    违约相关费用 & --- & --- & \ph & \ph \\
+    超额相关费用 & --- & --- & \ph & \ph \\
+    紧急购电费 & --- & \ph & \ph & \ph \\
+    \textbf{总费用} & \ph & \ph & \ph & \ph \\
+    相对 \(C^{base}\) 节省率 & \ph & \ph & \ph & \ph \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\begin{guideblock}
+汇总表的验收：① 四项费用之和等于总费用（费用分解自洽）；
+② 每一列都能追溯到对应的 result*.xlsx；
+③ 节省率一栏必须写明是相对哪个变体的 \(C^{base}\)（\calref{C-04}）。
+\end{guideblock}
+
+\subsection{成本分解与基线对照}
+
+\begin{guideblock}
+瀑布图（fig05）承担一句话的论证任务：\textbf{"钱花在哪、从哪省的、相对谁算的"}。
+每根柱必须有数值，箭头必须标出增减方向与金额，横轴必须含窗口与天数。
+禁止出现"没有基线的效果图"。
+\end{guideblock}
+
+\begin{figure}[htbp]
+  \centering
+  \includefig[width=0.95\linewidth]{fig05_waterfall.pdf}
+  \caption{成本分解瀑布图（起点为无储能基线 \(C^{base}\)（\calref{C-01}，变体 \ph）；
+           各柱依次为计划购电费、调整超额费用、违约费用、紧急购电费与储能搬运收益；
+           终点为最优总费用；窗口 2025-02-01 至 2025-12-31，共 334 天；单位：元）}
+  \label{fig:waterfall}
+\end{figure}
+
+由表~\ref{tab:summary} 与图~\ref{fig:waterfall} 可见，
+总费用的下降主要来自 \ph，占全部节省额的 \ph；
+紧急购电费用占比 \ph，说明 \ph。
+储能搬运收益为 \ph~元，相对无储能基线的节省率为 \ph（\calref{C-04}）。
+
+\subsection{题面指定时段与日期的结果表}
+
+\begin{guideblock}
+题面的表 1/2/3 必须\textbf{按原格式}给出，且单位要标在表头。
+题面表 3 的版式不规整，建议改用"行 = 日期 \(\times\) 紧急购电时段"的规整表，
+并在表注说明与题面表 3 的对应关系。
+本节只需给\textbf{题面指定}的时段与日期；完整 334 天在 result*.xlsx 中。
+\end{guideblock}
+
+问题 2、3、4 中题面指定日期的计划购电量、充放电量与紧急购电量，
+按表 1、表 2、表 3 格式分别列于表~\ref{tab:q2-tables}--表~\ref{tab:q3-tables}。
+
+\begin{table}[htbp]
+  \centering
+  \caption{指定日期的购电量与储能充放电量（问题 2，单位：kWh；按题面表 1、表 2 格式）}
+  \label{tab:q2-tables}
+  \small
+  \begin{tabular}{lcccc}
+    \toprule
+    日期 & 全天购电量 & 全天购电费（元） & 充电量 & 放电量 \\
+    \midrule
+    2025-03-20 & \ph & \ph & \ph & \ph \\
+    2025-06-21 & \ph & \ph & \ph & \ph \\
+    2025-09-23 & \ph & \ph & \ph & \ph \\
+    2025-12-21 & \ph & \ph & \ph & \ph \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+  \centering
+  \caption{指定日期的计划、调整与紧急购电量（问题 3，单位：kWh）}
+  \label{tab:q3-tables}
+  \small
+  \begin{tabular}{lccccc}
+    \toprule
+    日期 & 全天计划购电量 & 全天调整购电量 & 违约电量 & 超额电量 & 紧急购电量 \\
+    \midrule
+    2025-03-20 & \ph & \ph & \ph & \ph & \ph \\
+    2025-06-21 & \ph & \ph & \ph & \ph & \ph \\
+    2025-09-23 & \ph & \ph & \ph & \ph & \ph \\
+    2025-12-21 & \ph & \ph & \ph & \ph & \ph \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{guideblock}
+回读校验（每问完成后立即执行，也是提交前的必做项）：
+打开 result*.xlsx 核对工作表名与模板完全一致、行数列数正确、
+日期列首末为 2025-02-01 与 2025-12-31、无 NaN 无负值，
+再用独立脚本从结果文件重算"全天购电量 = \(\sum\)144 个时段列"（相对误差 \(\le 10^{-4}\)），
+并与本表\textbf{逐格对拍}（零差异）。
+\end{guideblock}

@@ -214,7 +214,7 @@ def check_figures() -> None:
         warn(
             "缺图（编译时会显示红框占位，不影响编译）："
             + "、".join(sorted(set(missing)))
-            + "。请由 scripts/plot_*.py 生成后放入 figures/"
+            + "。请由 C题代码/code/plot_fig*.py 生成后放入 figures/"
         )
     else:
         ok("插图：全部 \\includefig 引用的文件均已存在")
@@ -234,7 +234,8 @@ def check_code_files() -> None:
         err(
             "附录源程序缺失（格式规范第五条：缺少必要源程序可能被取消评奖资格）："
             + "、".join(missing)
-            + "。请把全部可运行源程序放入 code/ 目录，附录会自动原样引入。"
+            + "。请把全部可运行源程序放入 C题代码/code/（论文/code 为指向它的软链接），"
+            + "附录会自动原样引入；目录与命名口径见 C题代码/docs/00_代码目录与命名规范.md。"
         )
     else:
         ok(f"附录源程序：{len(names)} 个文件齐备（{len(set(names))} 个唯一文件）")

@@ -23,19 +23,25 @@
 \begin{lstlisting}[style=plain,basicstyle=\ttfamily\footnotesize\songti]
 support.zip
 +-- README.md                     复现说明（运行顺序、预期耗时、输出清单）
-+-- requirements.txt              依赖清单（锁定确切版本号）
-+-- code/                         全部源程序（与附录 E 一致）
++-- code/                         全部源程序（与附录 E 逐字一致）
 |   +-- config.py                 口径与参数（全文唯一来源）
-|   +-- data_loader.py            附件读取 + 时标对齐 + 断言
-|   +-- model_q1.py               问题 1 模型
-|   +-- model_q2.py               问题 2 模型（两阶段随机规划）
-|   +-- model_q3.py               问题 3 模型（多阶段滚动）
-|   +-- model_q4.py               问题 4 模型（波动电价 + 风险度量）
+|   +-- data_loader.py            附件读取 + ffill + 时标对齐 + 断言
 |   +-- scenario_gen.py           场景生成、削减与保真检验
+|   +-- model_q1.py               问题 1 模型（确定性 LP）
+|   +-- model_q2.py               问题 2 模型（两阶段随机规划）
+|   +-- model_q3.py               问题 3 模型（多阶段滚动 + 非预期性）
+|   +-- model_q4.py               问题 4 模型（波动电价 + 风险度量）
+|   +-- exp_newsboy.py            对照：报童临界分位数与经验覆盖率
+|   +-- exp_voi.py                对照：信息价值 VoI 与预报频次扫描
+|   +-- exp_ablation.py           消融矩阵（共用同一固定场景集）
+|   +-- exp_sensitivity.py        全局敏感性（Sobol 指数）
 |   +-- certify.py                最优性证书（阈值律与互补松弛校验）
 |   +-- audit.py                  独立复算费用与物理量（不共用建模费用函数）
+|   +-- plot_style.py             全局样式与配色语义
+|   +-- plot_fig03..fig10_*.py    八张数据图的生成脚本（图 1/2 为 TikZ）
 |   +-- run_all.py                一键复现全部结果
-|   `-- plot_fig01..fig10.py      十张图的生成脚本
+|   `-- requirements.txt          依赖清单（锁定确切版本号）
++-- data/                         附件 1--4
 +-- result/                       五个结果文件
 |   +-- result1.xlsx  result2.xlsx  result3.xlsx
 |   `-- result4-2.xlsx  result4-3.xlsx
@@ -75,20 +81,19 @@ support.zip
 
 \begin{enumerate}
   \item 解压 \texttt{support.zip}，在根目录执行
-        \texttt{pip install -r requirements.txt}（版本已锁定）；
+        \texttt{pip install -r code/requirements.txt}（版本已锁定）；
   \item 确认原始附件放在 \texttt{data/} 目录下（附件 1--4）；
   \item 执行 \texttt{python code/run\_all.py}，脚本将依次完成：
         读取附件并校准时标 \(\rightarrow\) 生成并固定场景集 \(\rightarrow\)
         依次求解问题 1--4 \(\rightarrow\) 写出五个结果文件 \(\rightarrow\)
-        运行独立审计 \(\rightarrow\) 生成十张图 \(\rightarrow\) 写出 \texttt{results\_summary.json}；
+        运行独立审计 \(\rightarrow\) 生成八张数据图 \(\rightarrow\) 写出 \texttt{results\_summary.json}；
   \item \textbf{预期运行时间}：\ph（其中场景生成与问题 3 的多阶段求解占比最大）；
   \item \textbf{输出文件}：问题 1--3 的结果文件 \texttt{result1.xlsx}、
         \texttt{result2.xlsx}、\texttt{result3.xlsx}；
         问题 4 的结果文件 \texttt{result4-2.xlsx}、\texttt{result4-3.xlsx}；
-        \texttt{figures/} 下的十张矢量 PDF；
+        \texttt{figures/} 下的八张矢量 PDF（图 1、图 2 为正文 TikZ 图，无对应脚本）；
         审计报告 \texttt{audit\_report.md}；复现摘要 \texttt{results\_summary.json}；
-  \item 一致性自检：在 \texttt{code/} 目录下执行
-        \texttt{python audit.py} 并加上 \texttt{check-paper} 参数，
+  \item 一致性自检：执行 \texttt{python code/audit.py check-paper}，
         脚本将把 \texttt{paper\_numbers.json} 中的论文数字与代码复算结果对拍，
         不一致即抛出异常。
 \end{enumerate}
@@ -131,7 +136,7 @@ support.zip
 \begin{lstlisting}[style=plain,basicstyle=\ttfamily\footnotesize\songti]
 audit_report.md（节选）
 
-[环境]    Python 3.x / 依赖版本见 requirements.txt
+[环境]    Python 3.x / 依赖版本见 code/requirements.txt
 [输入]    data/附件1..4.xlsx；result/result1..result4-3.xlsx
 [窗口]    2025-02-01 .. 2025-12-31（334 天）
 
@@ -156,24 +161,35 @@ A10 全天汇总列一致性    相对误差 = ______  阈值 1e-4     [ PASS / 
 以下为本论文建模、求解、绘图与审计所用的全部源程序（格式规范第五条）。
 将源程序放入 \texttt{code/} 目录后，本附录会自动原样引入文件内容。
 
+% 目录口径（不排版）：\texttt{code/} 是软链接 -> ../C题代码/code（唯一真源），
+% 因此附录内容恒等于 C题代码/code/ 下的真实文件，不需要复制副本。
+% 清单口径见 C题代码/docs/00_代码目录与命名规范.md §4（共 24 个文件）。
+% 新增脚本必须同步补进下面这份清单，否则"论文未列全部源程序"属第五条风险。
+
 \codefile{config.py}
 \codefile{data_loader.py}
+\codefile{scenario_gen.py}
 \codefile{model_q1.py}
 \codefile{model_q2.py}
 \codefile{model_q3.py}
 \codefile{model_q4.py}
-\codefile{scenario_gen.py}
+\codefile{exp_newsboy.py}
+\codefile{exp_voi.py}
+\codefile{exp_ablation.py}
+\codefile{exp_sensitivity.py}
 \codefile{certify.py}
 \codefile{audit.py}
 \codefile{run_all.py}
 \codefile{requirements.txt}
-\codefile[plain]{plot_fig03_dual.py}
+\codefile[plain]{plot_style.py}
+\codefile[plain]{plot_fig03_q1_dual_price.py}
+\codefile[plain]{plot_fig04_q1_marginal_value.py}
 \codefile[plain]{plot_fig05_waterfall.py}
-\codefile[plain]{plot_fig06_voi.py}
-\codefile[plain]{plot_fig07_ablation.py}
-\codefile[plain]{plot_fig08_frontier.py}
+\codefile[plain]{plot_fig06_voi_curve.py}
+\codefile[plain]{plot_fig07_ablation_matrix.py}
+\codefile[plain]{plot_fig08_risk_frontier.py}
 \codefile[plain]{plot_fig09_forecast_error.py}
-\codefile[plain]{plot_fig10_mechanism.py}
+\codefile[plain]{plot_fig10_strategy_mechanism.py}
 
 \begin{guideblock}
 附录放\textbf{可复制的纯文本源码}，\textbf{不要用截图}，也不要放空壳函数。

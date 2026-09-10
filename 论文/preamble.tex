@@ -1,0 +1,279 @@
+%!TEX root = main.tex
+% =============================================================================
+%  preamble.tex —— 2026 CUMCM C 题论文模板导言区
+%  格式依据：《全国大学生数学建模竞赛论文格式规范（2026 年修订稿）》format2026.doc
+%   第一条 A4、页边距≥2.5cm、左侧装订        -> geometry
+%   第三条 摘要≤1页、页码自摘要页起、页脚中部、阿拉伯数字连续 -> fancyhdr
+%   第四条 正文≤30页、不要目录                -> 不加载 \tableofcontents
+%   第六条 摘要页/正文/附录不得出现身份信息    -> 不设 \author，PDF 元数据留空
+%   第七条 引用需列参考文献并在正文标注        -> thebibliography（GB/T 7714）
+% =============================================================================
+
+% ---------------------------------------------------------------------------
+% 1. 页面与版式  —— 第一条：A4，上下左右各留 ≥2.5cm，左侧装订
+% ---------------------------------------------------------------------------
+\usepackage[
+  a4paper,
+  top=2.5cm, bottom=2.5cm, left=2.5cm, right=2.5cm,
+  footskip=1.0cm      % 页脚落在下边距内，正文块本身仍保有 2.5cm 边距
+]{geometry}
+
+% 行距：正文约 1.2 倍（格式规范第八条不对字号、行距作统一要求）。
+% 正文有 30 页硬上限，此处取值已为「表格与图填入真实结果」留出余量；
+% 若确实需要更松的行距，请先确认正文仍不超过 30 页。
+\linespread{1.2}
+% 允许 TeX 在极窄的表格列中略微拉伸以消除溢出（不影响观感）
+\setlength{\emergencystretch}{2em}
+% 段间距为 0（中文论文用首行缩进分段）；浮动体与标题间距一并收紧，
+% 以便正文容纳更多内容而不牺牲可读性
+\setlength{\parskip}{0pt}
+\setlength{\textfloatsep}{9pt plus 2pt minus 2pt}
+\setlength{\intextsep}{9pt plus 2pt minus 2pt}
+\setlength{\floatsep}{9pt plus 2pt minus 2pt}
+\setlength{\abovecaptionskip}{4pt}
+\setlength{\belowcaptionskip}{0pt}
+
+% ---------------------------------------------------------------------------
+% 2. 页码  —— 第三条：自摘要页起、页脚中部、阿拉伯数字从 1 连续编号
+%             摘要页即电子版第 1 页（第十条：承诺书与编号页不放电子版）
+% ---------------------------------------------------------------------------
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot[C]{\normalfont\thepage}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+\fancypagestyle{plain}{%
+  \fancyhf{}\fancyfoot[C]{\normalfont\thepage}%
+  \renewcommand{\headrulewidth}{0pt}\renewcommand{\footrulewidth}{0pt}%
+}
+\pagenumbering{arabic}
+
+% ---------------------------------------------------------------------------
+% 3. 数学、表格、图形
+% ---------------------------------------------------------------------------
+\usepackage{amsmath,amssymb,amsthm,mathrsfs,bm}
+\allowdisplaybreaks[2]
+
+% booktabs 的横线间距一并收紧，减少表格占用的纵向空间
+\usepackage{booktabs,longtable,tabularx,array,multirow,makecell}
+\setlength{\aboverulesep}{0.25ex}
+\setlength{\belowrulesep}{0.25ex}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{Y}{>{\centering\arraybackslash}X}
+\renewcommand{\arraystretch}{1.05}
+% 浮动体（图/表）排布参数：本文图表较多，放宽参数可显著减少"半空页"
+\usepackage{graphicx}
+\setcounter{topnumber}{3}
+\setcounter{bottomnumber}{2}
+\setcounter{totalnumber}{5}
+\renewcommand{\topfraction}{0.92}
+\renewcommand{\bottomfraction}{0.85}
+\renewcommand{\textfraction}{0.06}
+\renewcommand{\floatpagefraction}{0.72}
+\renewcommand{\dbltopfraction}{0.92}
+
+\usepackage{subcaption}
+\usepackage[font=small,labelsep=quad,skip=4pt]{caption}
+\usepackage{enumitem}
+\setlist{nosep,leftmargin=2.2em}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc,patterns,shapes.geometric,fit,backgrounds,decorations.pathreplacing,decorations.markings}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.16}
+\pgfplotsset{every axis/.append style={font=\small}}
+
+% 算法
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\renewcommand{\algorithmicrequire}{\textbf{输入：}}
+\renewcommand{\algorithmicensure}{\textbf{输出：}}
+\floatname{algorithm}{算法}
+
+% ---------------------------------------------------------------------------
+% 4. 定理类环境（中文名）
+% ---------------------------------------------------------------------------
+\theoremstyle{plain}
+\newtheorem{proposition}{命题}
+\newtheorem{lemma}{引理}
+\newtheorem{corollary}{推论}
+\theoremstyle{definition}
+\newtheorem{definition}{定义}
+\renewcommand{\proofname}{\heiti 证明}
+\renewcommand{\qedsymbol}{$\square$}
+
+% ---------------------------------------------------------------------------
+% 5. 章节标题样式：一级「一、」三号黑体居中；二级 四号黑体；三级 小四黑体
+% ---------------------------------------------------------------------------
+\ctexset{
+  section = {
+    format     = \zihao{3}\heiti\centering,
+    name       = {,、},
+    number     = \chinese{section},
+    aftername  = {},
+    beforeskip = 2.2ex plus 1ex minus .2ex,
+    afterskip  = 1.6ex plus .2ex,
+  },
+  subsection = {
+    format     = \zihao{4}\heiti\raggedright,
+    number     = \arabic{section}.\arabic{subsection},
+    aftername  = \quad,
+    beforeskip = 2.0ex plus 1ex minus .2ex,
+    afterskip  = 1.0ex plus .2ex,
+  },
+  subsubsection = {
+    format     = \zihao{-4}\heiti\raggedright,
+    number     = \arabic{section}.\arabic{subsection}.\arabic{subsubsection},
+    aftername  = \quad,
+    beforeskip = 2.0ex plus 1ex minus .2ex,
+    afterskip  = 1.0ex plus .2ex,
+  },
+  paragraph = {
+    format     = \zihao{-4}\heiti\raggedright,
+    aftername  = \quad,
+  },
+}
+
+% ---------------------------------------------------------------------------
+% 6. 源码清单（附录）—— 关键：basicstyle 中加入 \songti，
+%    使代码中的中文注释用已嵌入的中文字体排版；否则中文会丢失或字体不嵌入。
+% ---------------------------------------------------------------------------
+\usepackage{listings}
+\definecolor{cKeyword}{RGB}{0,80,160}
+\definecolor{cComment}{RGB}{0,120,80}
+\definecolor{cString} {RGB}{170,60,0}
+\definecolor{cGray}   {RGB}{120,120,120}
+\lstset{
+  basicstyle       = \ttfamily\footnotesize\songti,
+  keywordstyle     = \color{cKeyword}\bfseries,
+  commentstyle     = \color{cComment}\itshape,
+  stringstyle      = \color{cString},
+  numberstyle      = \tiny\color{cGray},
+  numbers          = left,
+  numbersep        = 7pt,
+  frame            = single,
+  framerule        = 0.4pt,
+  rulecolor        = \color{cGray},
+  breaklines       = true,
+  breakatwhitespace= false,
+  columns          = flexible,
+  keepspaces       = true,
+  showstringspaces = false,
+  tabsize          = 4,
+  xleftmargin      = 2.2em,
+  framexleftmargin = 2.2em,
+  aboveskip        = 1.2ex,
+  belowskip        = 1.2ex,
+}
+\lstdefinestyle{py}{language=Python}
+\lstdefinestyle{plain}{language=}
+
+% ---------------------------------------------------------------------------
+% 7. 超链接与 PDF 元数据（第六条：元数据不得含身份信息）
+% ---------------------------------------------------------------------------
+\usepackage[hidelinks,bookmarks=true,bookmarksnumbered=false]{hyperref}
+\hypersetup{
+  pdfauthor  = {},
+  pdfcreator = {},
+  pdfsubject = {},
+  pdftitle   = {微网与外部电网电力调控策略},
+}
+
+% ---------------------------------------------------------------------------
+% 8. 写作期与定稿期开关
+%    \drafttrue  ：显示【写作提示】与红色 {待计算} 占位符（写作期默认）
+%    \draftfalse ：隐藏全部写作提示；占位符变为醒目红底，便于定稿前扫尾
+%    两种进入定稿模式的方式（任选）：
+%      (a) 把下面一行改成 \draftfalse
+%      (b) 在论文目录下执行  touch final.flag   （便于反复切换与自动检查）
+%    定稿前务必运行 tools/check_paper.py
+% ---------------------------------------------------------------------------
+\newif\ifdraft
+\drafttrue
+\IfFileExists{final.flag}{\draftfalse}{}
+
+\definecolor{cGuide}{RGB}{90,90,90}
+\definecolor{cNote} {RGB}{0,90,180}
+\definecolor{cPh}   {RGB}{200,0,0}
+\definecolor{cEvid} {RGB}{120,60,150}
+
+\usepackage{environ}
+
+% 带圈数字（①②③…）、罗马数字等符号在默认字体分类下会被交给西文字体而缺字，
+% 这里把它们划入 CJK 字符类，交给中文字体排版（仅 XeLaTeX + xeCJK 生效）
+\ifdefined\xeCJKsetcharclass
+  \xeCJKsetcharclass{"2460}{"24FF}{1}   % ①②③…⒈⒉⒊…
+  \xeCJKsetcharclass{"2160}{"217F}{1}   % Ⅰ Ⅱ Ⅲ … ⅰ ⅱ ⅲ
+  \xeCJKsetcharclass{"3000}{"303F}{1}   % CJK 标点
+\fi
+
+% 【写作提示】块：draft 模式显示，定稿模式整块消失
+\NewEnviron{guideblock}{%
+  \ifdraft
+    \par\medskip\noindent{\color{cGuide}\rule{\linewidth}{0.7pt}}\par\nobreak
+    \begingroup\small\color{cGuide}\noindent\textbf{【写作提示】}\ignorespaces\BODY\par\endgroup
+    \noindent{\color{cGuide}\rule{\linewidth}{0.7pt}}\par\medskip
+  \fi
+}
+
+% 行内短注
+\newcommand{\note}[1]{\ifdraft{\color{cNote}\small【注：#1】}\fi}
+
+% 未算出的数字：一律用 \ph 占位，严禁编造数字
+% 正文中允许在占位符内断行（避免长占位符把行撑出边界），数学模式中则用 \hbox 保持整体
+\newcommand{\ph}[1][待计算]{%
+  \ifmmode\hbox{\color{cPh}\bfseries 【#1】}%
+  \else{\color{cPh}\bfseries 【#1】}\fi}
+
+% 证据编号（证据账本 C-Qn-xx）
+\newcommand{\evid}[1]{\ifdraft{\color{cEvid}(#1)}\else（见 #1）\fi}
+
+% 口径编号（口径框 C-01…C-08）
+\newcommand{\calref}[1]{口径 #1}
+
+% 口径框（紧凑版：小字号、无首行缩进，正文用「定义/数据/时段/单位/不含/对照/复算」逐项写）
+\NewEnviron{caliber}[2]{%
+  \par\smallskip\noindent{\color{cEvid}\rule{\linewidth}{0.7pt}}\par\nobreak
+  {\noindent\heiti 口径 #1\quad #2\par}\nobreak
+  \begingroup\footnotesize\setlength{\parindent}{0pt}\BODY\par\endgroup
+  \noindent{\color{cEvid}\rule{\linewidth}{0.7pt}}\par\smallskip
+}
+
+% 创新五段式
+\NewEnviron{innovation}[2]{%
+  \par\medskip\noindent{\heiti 创新 #1\quad #2}\par\nobreak\vspace{0.2ex}
+  \begingroup\BODY\par\endgroup\medskip
+}
+\newcommand{\ip}[1]{\par\noindent\textbf{#1}\quad\ignorespaces}
+
+% 插图：图片不存在时画红框占位，保证任何阶段都能编译
+\newcommand{\includefig}[2][width=\linewidth]{%
+  \IfFileExists{figures/#2}%
+    {\includegraphics[#1]{figures/#2}}%
+    {\fbox{\begin{minipage}[c][2.6cm][c]{0.9\linewidth}\centering\color{cPh}\small
+      【缺图】\texttt{\detokenize{figures/#2}}\par\vspace{0.6ex}
+      待由 \texttt{scripts/plot\_*.py} 生成后放入 \texttt{figures/}\end{minipage}}}%
+}
+
+% 附录源程序：自动原样引入 code/ 目录下的真实文件，
+% 保证"附录代码 = 真正跑出结果的代码"；文件缺失时给出红框提示而不中断编译。
+\newcommand{\codefile}[2][py]{%
+  \par\medskip\noindent{\heiti 源程序：\texttt{\detokenize{code/#2}}}\par\nobreak
+  \IfFileExists{code/#2}%
+    {\lstinputlisting[style=#1]{code/#2}}%
+    {\begin{center}\fcolorbox{cPh}{white}{\parbox{0.92\linewidth}{\centering\color{cPh}\small
+       【缺文件】\texttt{\detokenize{code/#2}}\par\vspace{0.4ex}
+       请把源程序放入 \texttt{code/} 目录，附录会\textbf{自动原样引入}（不要用截图）}}\end{center}}%
+  \par\medskip
+}
+
+% 论文标题（摘要页与 PDF 元数据共用，只改这一处）
+\newcommand{\papertitle}{微网与外部电网电力调控策略}
+
+% 单位（正体，与变量斜体区分）
+\newcommand{\unit}[1]{\textup{#1}}
+
+% 正文中引用题面表格
+\newcommand{\tabref}[1]{表~#1}

@@ -1,0 +1,144 @@
+%!TEX root = ../main.tex
+% =============================================================================
+%  七、问题 4：波动电价下的风险决策模型      建议 3–4 页
+%  评审在问：波动电价怎么处理的？
+%  本节必须出现：① 电价过程的四项检验  ② 两层建模（分时骨架 + 随机残差）
+%                ③ 联合情景（Copula / 分块 Bootstrap），\textbf{必须保留 ρ(p,L)}
+%                ④ 风险—费用前沿 + 真实轨迹回测
+% =============================================================================
+
+\section{问题 4：波动电价下的风险决策模型}
+
+\subsection{电价过程的统计检验}
+
+\begin{guideblock}
+不能直接把附件 4 当成"另一组已知价格"代入了事——那就等于假设 \(0{:}00\) 已知全天电价，
+与"电价实时波动"的题意矛盾。必须先把电价当作\textbf{随机过程}检验并建模，
+四项检验缺一不可。这一节也是本题与问题 2/3 在建模哲学上的分水岭。
+\end{guideblock}
+
+问题 4 中电价不再是已知的确定性序列，而是与光伏出力同时随机的过程。
+本文先对附件 4 的电价序列做四项检验（表~\ref{tab:price-test}）。
+
+\begin{table}[htbp]
+  \centering
+  \caption{电价过程的四项统计检验（数据：附件 4，2025-01-01 至 12-31，\(n=\ph\)）}
+  \label{tab:price-test}
+  \footnotesize
+  \begin{tabularx}{\linewidth}{C{1.2cm} L{3.0cm} L{4.0cm} L{3.2cm} Y}
+    \toprule
+    编号 & 检验对象 & 检验方法与统计量 & 结果 & 对建模的含义 \\
+    \midrule
+    T1 & 确定性日内骨架是否存在
+       & 逐时段均值 vs 逐时段标准差的比值 & \ph
+       & 若骨架显著，则采用"骨架 + 残差"两层结构 \\
+    \addlinespace
+    T2 & 平稳性与日间差异
+       & 分月均值/方差、ADF 或 KPSS 检验 & \ph
+       & 决定骨架是否可按月分段 \\
+    \addlinespace
+    T3 & 时序自相关与波动聚集
+       & 残差 ACF/PACF、Ljung--Box 检验、ARCH 效应检验 & \ph
+       & 决定残差用独立抽样还是分块 Bootstrap \\
+    \addlinespace
+    T4 & 与负载/光伏的相关性
+       & Pearson 与 Spearman 相关、三个尺度拆解 & \ph
+       & \textbf{决定是否必须生成联合情景} \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsection{两层电价模型与联合情景生成}
+
+本文采用\textbf{两层结构}刻画电价：第一层是可预测的\textbf{分时骨架}
+\(\bar p_t\)（由逐时段均值或分月逐时段均值给出），
+第二层是不可预测的\textbf{随机残差} \(\varepsilon_t\)：
+
+\begin{equation}
+  p_{d,t}=\bar p_{t}+\varepsilon_{d,t},\qquad
+  \mathbb{E}[\varepsilon_{d,t}]=0
+  \label{eq:q4-price}
+\end{equation}
+
+残差项 \(\{\varepsilon_{d,t}\}\) 由\textbf{分块 Bootstrap}（以"日"为块）重采样得到，
+从而保留日内形状与自相关结构；同时，为保留\textbf{电价与负载/净负荷的相关结构}
+\(\rho(p,L)\)，本文在重采样时\textbf{成对抽取}（电价日块与对应的负载、光伏日块同时抽取），
+必要时再用 Copula 对边缘分布做再拟合。
+\begin{guideblock}
+关键点：\textbf{必须保留 \(\rho(p,L)\) 相关结构}。若电价与光伏/负载独立抽样，
+会系统性地低估"高价时段同时缺电"的尾部风险，使风险度量失去意义。
+检验方式：比较生成情景与原始样本在
+"高价 \(\times\) 高净负荷"联合尾部的占比。
+\end{guideblock}
+
+生成联合情景后，把问题 2 与问题 3 的模型分别在式~\eqref{eq:q4-price} 的电价过程下重解，
+即得 result4-2.xlsx 与 result4-3.xlsx 的全部结果。
+此时模型的目标函数为
+
+\begin{equation}
+  \min\ \ \mathbb{E}\Bigl[\,C^{\text{total}}(p(\omega),L(\omega),PV(\omega))\,\Bigr]
+  +\lambda\cdot \mathrm{CVaR}_\beta\Bigl[\,C^{\text{total}}(\cdot)\,\Bigr]
+  \label{eq:q4-obj}
+\end{equation}
+
+其中 \(C^{\text{total}}\) 的口径与问题 2、3 完全一致，\(\beta=0.95\) 预先锁定，
+\(\lambda\ge 0\) 为风险厌恶系数。
+
+\begin{guideblock}
+口径纪律：波动电价下的费用必须与问题 2、3 使用\textbf{同一} \(C^{\text{total}}\) 定义，
+否则两套结果不可比。这一点写进口径表（\calref{C-03}），不要另起一套求和式。
+\end{guideblock}
+
+\subsection{风险—费用有效前沿}
+
+以 \(\lambda\) 为参数扫描，得到\textbf{风险—费用有效前沿}：每一点对应一个
+\((\text{期望费用},\ \mathrm{CVaR})\) 组合。前沿的构造要点是
+\textbf{给出两端极端解}（\(\lambda=0\) 的纯期望最优与 \(\lambda\to\infty\) 的近似最坏情形）
+与\textbf{推荐点} \(\lambda^{*}\)，说明推荐点是在什么判据下选出的。
+
+\begin{figure}[htbp]
+  \centering
+  \includefig[width=0.95\linewidth]{fig08_risk_frontier.pdf}
+  \caption{风险—费用有效前沿（横轴：95\% 条件风险价值 CVaR；纵轴：期望总费用；
+           每点标注对应的风险厌恶系数 \(\lambda\)，圆点为推荐点 \(\lambda^{*}\)；
+           两端为纯期望最优解与近似最坏情形解；数据为分块 Bootstrap 生成的
+           联合情景集，\(N'=\ph\) 个场景）}
+  \label{fig:frontier}
+\end{figure}
+
+\begin{guideblock}
+风险前沿\textbf{必须配真实轨迹回测}（图注下方附小表）：
+取三个代表点（\(\lambda=0\)、\(\lambda^{*}\)、\(\lambda\to\infty\)），
+在\textbf{实际发生的} 334 天轨迹上重算其费用与最大单日费用。
+只有情景内指标的前沿是"自说自话"，评审会直接质疑。
+\end{guideblock}
+
+\begin{table}[htbp]
+  \centering
+  \caption{风险前沿三个代表点在真实轨迹上的回测结果（单位：元）}
+  \label{tab:frontier-backtest}
+  \footnotesize
+  \begin{tabularx}{\linewidth}{C{2.0cm} C{2.6cm} C{2.8cm} C{2.8cm} Y}
+    \toprule
+    代表点 & 情景内期望费用 & 情景内 95\% CVaR & 真实轨迹总费用 & 真实轨迹最大单日费用 \\
+    \midrule
+    \(\lambda=0\)（期望最优） & \ph & \ph & \ph & \ph \\
+    \(\lambda=\lambda^{*}\)（推荐） & \ph & \ph & \ph & \ph \\
+    \(\lambda\to\infty\)（近似最坏） & \ph & \ph & \ph & \ph \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsection{求解结果}
+
+在波动电价下重解问题 2 与问题 3，得总费用分别为 \ph~元与 \ph~元
+（固定电价下的对应值为 \ph~元与 \ph~元，差异 \ph）。
+该差异的大小说明电价波动对购电费用的影响程度；
+推荐风险水平 \(\lambda^{*}=\ph\) 下，期望费用相对 \(\lambda=0\) 上升 \ph，
+而 95\% CVaR 下降 \ph，即以 \ph 的期望费用溢价换取尾部风险下降 \ph。
+
+\begin{guideblock}
+本节结论要写成\textbf{可比较的权衡}，而不是"我们算出了两套结果"。
+推荐点必须给出选择判据（例如"在期望费用上升不超过 0.5\% 的前提下使 CVaR 最小"），
+否则"推荐"二字无依据。
+\end{guideblock}

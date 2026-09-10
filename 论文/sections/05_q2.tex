@@ -1,0 +1,255 @@
+%!TEX root = ../main.tex
+% =============================================================================
+%  五、问题 2：不确定性下的两阶段计划购电模型     建议 4–5 页
+%  评审在问：不确定性处理合理吗？
+%  本节必须出现：① 信息结构声明  ② 场景生成与削减（三层保真）
+%                ③ 报童临界分位数与四条适用边界  ④ CVaR/鲁棒对照（同一场景集）
+%  红线：报童模型只作"近似刻画 + 上下界 + 直觉解释"，不得声称它是精确解。
+% =============================================================================
+
+\section{问题 2：不确定性下的两阶段计划购电模型}
+
+\subsection{问题分析与决策结构}
+
+\begin{guideblock}
+本节必须把\textbf{"什么时候决定什么、依据什么结算"}讲清楚。
+一句话主线：日前申报—实时结算。计划依据为预报值，结算依据为实际值，
+两者是\textbf{两套数据}；紧急购电发生在\textbf{实时}，不在任何决策时刻。
+\end{guideblock}
+
+问题 2 与问题 1 的差别有三点：电价仍逐日相同，
+但负载与光伏\textbf{逐日逐时段变化}；计划仍在每天 \(0{:}00\) 制定；
+若微网提供的电能低于负载，须按\textbf{交易时刻电价的 5 倍}紧急购电。
+因此决策天然分为两个层次：
+
+\begin{itemize}
+  \item \textbf{第一阶段（日前，\(0{:}00\)）}：在只知道预报的条件下，
+        一次性确定全天 144 个时段的\textbf{计划购电量 \(E_t\)}与\textbf{充放电量 \(c_t,d_t\)}，
+        该决策对当日所有可能的实现都相同，即\textbf{不依赖场景}；
+  \item \textbf{第二阶段（实时结算）}：负载与光伏实际值揭示后，
+        计划与实际之差由\textbf{紧急购电量 \(g_t\)}（缺口，按 \(5p_t\) 计价）
+        与\textbf{弃光电量 \(s_t\)}（盈余）吸收。
+\end{itemize}
+
+\begin{guideblock}
+这里有一个必须显式声明的建模选择：\textbf{充放电计划也在第一阶段确定，
+实时不允许重调度}。依据是题面"其他时间段的购电费用均按计划购电量计算"，
+以及 result2.xlsx 要求填报"充放电量"（属于计划的一部分）。
+本文在灵敏度中给出"允许实时重调度"的变体对照，并报告两者费用差异。
+若不声明这一点，评审无法判断模型是否自洽。
+\end{guideblock}
+
+\subsection{场景生成与削减}
+
+\begin{guideblock}
+场景不能"随便抽样"，必须做\textbf{三层保真检验}并给出检验结果：
+① 边缘分布（均值/方差/分位数）；② 时序相关（日内形状、残差自相关）；
+③ 跨变量相关（光伏与负载）。削减后的场景集必须\textbf{存盘固定}，
+问题 3 与全部消融实验读同一份，否则"改进"可能只是场景噪声。
+\end{guideblock}
+
+本文以附件 2 的 334 天实际数据为样本，用\textbf{分块 Bootstrap}（以"日"为块，
+保留日内完整形状与两变量相关结构）生成 \(N\) 个场景，再经 \(k\)-means 型削减得到
+\(N'\) 个代表性场景并赋概率 \(w_\omega\)；\(N'\) 由"最优值进入 \(\pm 0.5\%\) 平稳带"
+的最小规模确定，最终取 \(N'=\ph\)。三层保真检验结果列于表~\ref{tab:scenfid}。
+
+\begin{table}[htbp]
+  \centering
+  \caption{场景集的三层保真度检验（原始 334 天样本 vs 生成的 \(N'\) 个场景）}
+  \label{tab:scenfid}
+  \footnotesize
+  \begin{tabularx}{\linewidth}{C{1.4cm} L{3.4cm} L{3.0cm} L{3.0cm} Y}
+    \toprule
+    层次 & 检验对象 & 统计量 & 原始样本 & 场景集 \\
+    \midrule
+    边缘 & 光伏功率分布 & 均值 / 标准差 & \ph / \ph & \ph / \ph \\
+    边缘 & 净负荷分布 & 分位数 \(5\%,50\%,95\%\) & \ph & \ph \\
+    时序 & 日内形状 & 逐时段均值向量夹角 & --- & \ph \\
+    时序 & 残差自相关 & 滞后 1 期自相关 & \ph & \ph \\
+    跨变量 & 光伏—负载 & Pearson \(\rho\) & \ph & \ph \\
+    跨变量 & 光伏—净负荷 & Pearson \(\rho\) & \ph & \ph \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsection{两阶段随机规划模型}
+
+\begin{subequations}\label{eq:q2}
+  % 目标
+  \begin{equation}
+    \min_{\substack{E,c,d,S}}\quad
+    \sum_{t=1}^{144}p_t E_t
+    \;+\;\sum_{\omega\in\Omega}w_\omega\sum_{t=1}^{144}5\,p_t\,g_{t}(\omega)
+    \label{eq:q2-obj}
+  \end{equation}
+  % 第一阶段决策（非预期性）
+  \begin{equation}
+    E_t,\ c_t,\ d_t,\ S_t\ \text{与}\ \omega\ \text{无关},
+    \qquad \forall t\in\mathcal T
+    \label{eq:q2-nonanticip}
+  \end{equation}
+  % SOC 与界（第一阶段）
+  \begin{equation}
+    S_t=S_{t-1}+\eta_c c_t-\frac{d_t}{\eta_d},\quad
+    \underline S\le S_t\le\overline S,\quad
+    0\le c_t,d_t\le\overline P\Delta t,\quad
+    S_0=S^{init}
+    \label{eq:q2-soc}
+  \end{equation}
+  % 第二阶段：缺口与盈余
+  \begin{equation}
+    g_t(\omega)\ \ge\ \bigl(L_{\omega,t}-PV_{\omega,t}\bigr)\Delta t+c_t-d_t-E_t,
+    \qquad g_t(\omega)\ge 0
+    \label{eq:q2-gap}
+  \end{equation}
+  \begin{equation}
+    E_t\ge 0,\qquad g_t(\omega)\ge 0,\qquad s_t(\omega)\ge 0
+    \label{eq:q2-nonneg}
+  \end{equation}
+\end{subequations}
+
+式~\eqref{eq:q2-nonanticip} 是两阶段结构的代数表达：
+凡带 \(\omega\) 下标的量都是\textbf{事后}量（待定/结算量），
+第一阶段变量在场景间共享。式~\eqref{eq:q2-gap} 表示缺口由紧急购电补齐，
+盈余则由弃光 \(s_t(\omega)\) 吸收；由于 \(p_t>0\)，最优解中
+\(g_t(\omega)\) 取到其下界（不做无谓的紧急购电）。
+
+\begin{guideblock}
+注意式 \eqref{eq:q2-gap} 使用的是\textbf{计划充放电量} \(c_t,d_t\)（不含 \(\omega\)），
+与 §5.1 的建模选择一致。若采用"允许实时重调度"的变体，
+则 \(c_t(\omega),d_t(\omega)\) 进入第二阶段，模型规模与求解时间显著上升，
+须在同一场景集上比较两者费用并报告差异。
+\end{guideblock}
+
+\subsection{报童型临界分位数：安全边际的可解释刻画}
+
+\begin{guideblock}
+这是本问最容易被问住的地方。正确姿势：
+\textbf{只把它当作"近似刻画 + 上下界 + 直觉解释"}，给出两条边界并说明数值解落在两界之间；
+必须列出\textbf{四条偏离来源}，不得声称报童模型给出了精确解。
+\end{guideblock}
+
+若暂时忽略储能的跨期耦合，把每个时段看作一个独立的"报童问题"：
+计划购电量 \(E_t\) 相当于订货量，当日实际需求 \(D_t=(L_t-PV_t)\Delta t\)
+相当于需求量；购电不足时每缺 1~kWh 要多付 \((5-1)p_t=4p_t\)（\textbf{缺货成本}
+\(c_u=4p_t\)），购电过剩时每多买 1~kWh 的损失为 \(c_o\)。
+由报童模型，最优计划量应为需求分布的\textbf{临界分位数}：
+
+\begin{equation}
+  q^{*}_t=F_{D_t}^{-1}\!\left(\frac{c_u}{c_u+c_o}\right)
+  =F_{D_t}^{-1}\!\left(\frac{4p_t}{4p_t+c_o}\right)
+  \label{eq:q2-newsvendor}
+\end{equation}
+
+过剩成本 \(c_o\) 有两种口径，构成临界分位数的\textbf{上下界}：
+\textbf{口径一}（过剩电量完全浪费）\(c_o=p_t\)，得临界分位数 \(=0.8\)；
+\textbf{口径二}（过剩电量可部分回收，回收价值 \(r_t\)）\(c_o=p_t-r_t\)，
+回收到最高时临界分位数上界趋于 \(1\)。本文按本队口径取 \(c_o=\ph\)，
+得临界分位数 \ph，并同时报告两界 \ph--\ph。
+
+\begin{table}[htbp]
+  \centering
+  \caption{报童近似的两条边界与数值解的经验覆盖率}
+  \label{tab:newsvendor}
+  \footnotesize
+  \begin{tabularx}{\linewidth}{L{3.6cm} C{2.2cm} C{2.4cm} L{3.2cm} Y}
+    \toprule
+    过剩成本口径 \(c_o\) & 临界分位数 & 经验计划覆盖率 & 样本量 & 与数值解的关系 \\
+    \midrule
+    过剩全浪费 \(c_o=p_t\) & 0.800 & \ph & \ph & 下界 \\
+    过剩可回收 \(c_o=\ph\) & \ph & \ph & \ph & 上界 \\
+    \midrule
+    两阶段随机规划数值解 & --- & \ph & \ph & 应落在两界之间 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+报童模型在本问题中\textbf{不是精确解}，其偏离来源有四条：
+
+\begin{enumerate}
+  \item \textbf{多时段耦合}：144 个时段通过储电量递推耦合，
+        不能拆成 144 个独立报童问题；储能的充放把"今日的过剩"变成"明日的供给"；
+  \item \textbf{过剩并非全浪费}：计划购电的过剩量可在后续时段替代购电，
+        甚至被储能吸纳后在高价时段释放，故 \(c_o\) 严格小于 \(p_t\)；
+  \item \textbf{缺口的分布不独立}：紧急购电按实际轨迹逐时段触发，
+        同一场景内各时段的缺口高度相关，且受 \(c_t,d_t\) 的联合影响；
+  \item \textbf{风险度量改变解的形式}：当目标由期望费用改为 CVaR 时，
+        临界分位数不再由 \(c_u/(c_u+c_o)\) 给出，而需按尾部分布重新求解。
+\end{enumerate}
+
+因此本文把式~\eqref{eq:q2-newsvendor} 作为\textbf{安全边际的直觉刻画与合理性检验}：
+若两阶段模型的经验计划覆盖率落在两界之间，说明模型行为符合经济直觉；
+若落在外侧，则说明场景集或惩罚参数需要复核。
+
+\subsection{风险度量的对照}
+
+\begin{guideblock}
+对照必须在\textbf{同一场景集、同一口径、同一预算}下进行（消融公平性三条铁律）。
+费用类对照应给出"区间或多种子均值"，并明确报告鲁棒方案以多少期望费用溢价
+换取最坏情形费用下降多少。
+\end{guideblock}
+
+期望费用最小化对极端场景不敏感。为刻画风险，本文在同一场景集上另解两组模型：
+\textbf{CVaR 模型}（在目标中加入 \(\lambda\) 倍条件风险价值，
+置信水平 \(\beta=0.95\) 预先锁定）与\textbf{鲁棒模型}（最小化最坏场景费用）。
+三者在同一场景集与同一条真实轨迹上的费用对比见表~\ref{tab:q2-risk}。
+
+\begin{table}[htbp]
+  \centering
+  \caption{期望、CVaR 与鲁棒模型在同一场景集上的费用对照（单位：元）}
+  \label{tab:q2-risk}
+  \footnotesize
+  \begin{tabularx}{\linewidth}{L{3.0cm} C{2.6cm} C{2.6cm} C{2.6cm} Y}
+    \toprule
+    模型 & 期望费用 & 95\% CVaR & 最坏场景费用 & 相对完美信息下界的差 \\
+    \midrule
+    期望最小化 & \ph & \ph & \ph & \ph \\
+    CVaR（\(\lambda=\ph\)） & \ph & \ph & \ph & \ph \\
+    鲁棒（最坏情形） & \ph & \ph & \ph & \ph \\
+    完美信息下界 & \ph & \ph & \ph & --- \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsection{求解结果}
+
+\begin{guideblock}
+本节的费用必须给出\textbf{四项分解}（计划 / 调整 / 违约 / 紧急），
+且各表费用之和等于总费用——这是审计项 A8 的内容，也是评审最容易核对的地方。
+\end{guideblock}
+
+在 2025-02-01 至 2025-12-31（334 天）窗口内求解式~\eqref{eq:q2}，
+得总费用 \ph~元，其中计划购电费 \ph~元、紧急购电费 \ph~元，
+紧急购电量合计 \ph~kWh，出现在 \ph~个时段、\ph~天。
+经验计划覆盖率 \ph~落在报童两界 \ph--\ph~之间，与 \S5.4 的经济直觉一致。
+
+\begin{caliber}{C-05}{紧急购电量}
+\begin{itemize}
+  \item[定义] \(\displaystyle G=\sum_{d\in\mathcal D}\sum_{t=1}^{144}g_{d,t}\)，
+        其中 \(g_{d,t}\) 为式~\eqref{eq:q2-gap} 意义下的缺口电量
+  \item[数据] 结算依据为附件 2 的实际负载与实际光伏功率
+  \item[时段] 334 天 \(\times\) 144 时段
+  \item[单位] kWh（保留 3 位小数）
+  \item[不含] \textbf{不}含调整机制引入的缺口（问题 3 的调整量单独统计）
+  \item[对照] 完美信息（R1）下该量为 0；本文 R1 对照结果为 \ph~kWh
+  \item[复算] \texttt{audit.py::emergency\_energy(window='2025-02-01:2025-12-31')}
+\end{itemize}
+\end{caliber}
+
+\begin{table}[htbp]
+  \centering
+  \caption{微网在指定日期的紧急购电量（单位：kWh；表注：本表按"日期 \(\times\) 紧急购电时段"逐行展开，
+           与题面表 3 的横向排版一一对应）}
+  \label{tab:q2-emergency}
+  \small
+  \begin{tabular}{cccc}
+    \toprule
+    日期 & 购电时间段 & 购电量 & 交易时刻电价（元/kWh） \\
+    \midrule
+    2025-03-20 & \ph & \ph & \ph \\
+    2025-06-21 & \ph & \ph & \ph \\
+    2025-09-23 & \ph & \ph & \ph \\
+    2025-12-21 & \ph & \ph & \ph \\
+    \bottomrule
+  \end{tabular}
+\end{table}

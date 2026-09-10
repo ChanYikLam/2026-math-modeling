@@ -1,0 +1,222 @@
+%!TEX root = ../main.tex
+% =============================================================================
+%  六、问题 3：多阶段滚动调整模型        建议 4–5 页
+%  评审在问：多阶段做对了吗？
+%  本节必须出现：① 场景树与非预期性约束（及其实现方式）
+%                ② 分段线性凸成本的线性化与互斥性说明
+%                ③ VoI 五组对照 + 成本侧比较 —— 直接回答"是否需要引入其他时刻预报"
+%  红线：只说"建议引入更多预报"而不给 VoI 量化 = 没有回答题面那一问。
+% =============================================================================
+
+\section{问题 3：多阶段滚动调整模型}
+
+\subsection{多阶段决策结构与费用口径}
+
+问题 3 在问题 2 的基础上增加两个要素：
+一是每天 \(0{:}00\)、\(6{:}00\)、\(12{:}00\)、\(18{:}00\) 四个时刻均可获得
+未来 24 小时整点的光伏预报，因而决策随信息到达而\textbf{滚动修正}；
+二是引入\textbf{两类不对称惩罚}。按题面，总购电费用包括计划购电费用、
+紧急购电费用和调整购电量的相关费用。
+
+\begin{guideblock}
+费用口径必须在此处\textbf{锁定并写清}，且要有"不含项"清单。
+本文采用的"偏差量定价"口径写成一条公式（下式），
+同时必须在第九章给出"计划量全额结算"口径的对照及两者差值——
+否则评审无法判断你的费用数字是哪一种口径算出来的（假设 A7）。
+\end{guideblock}
+
+本文采用\textbf{偏差量定价口径}：计划购电量与实际调整购电量中较小者按正常电价 \(p_t\) 结算；
+计划高于调整的部分为\textbf{违约}，按 \(0.5p_t\) 计价；调整高于计划的部分为\textbf{超额}，
+按 \(1.5p_t\) 计价；缺口按 \(5p_t\) 紧急购电计价。故时段 \(t\) 的购电相关费用为
+
+\begin{equation}
+  c_t^{\text{buy}}
+  =p_t\min\bigl(E^{\text{plan}}_t,E^{\text{adj}}_t\bigr)
+  +0.5\,p_t\bigl(E^{\text{plan}}_t-E^{\text{adj}}_t\bigr)^{+}
+  +1.5\,p_t\bigl(E^{\text{adj}}_t-E^{\text{plan}}_t\bigr)^{+}
+  \label{eq:q3-cost}
+\end{equation}
+
+其关于调整量 \(E^{\text{adj}}_t\) 是\textbf{分段线性的凸函数}：
+斜率在 \(E^{\text{adj}}_t<E^{\text{plan}}_t\) 段为 \(0.5p_t\)，
+在 \(E^{\text{adj}}_t>E^{\text{plan}}_t\) 段为 \(1.5p_t\)，斜率随调整量递增。
+
+\subsection{分段线性凸成本的线性化}
+
+引入非负辅助变量 \(u_t,v_t\ge 0\)（\(u_t\) 表示超额量，\(v_t\) 表示违约量），
+令其满足
+
+\begin{subequations}\label{eq:q3-lin}
+  \begin{equation}
+    E^{\text{adj}}_t-E^{\text{plan}}_t=u_t-v_t,\qquad u_t\ge 0,\quad v_t\ge 0
+    \label{eq:q3-lin-diff}
+  \end{equation}
+  \begin{equation}
+    c_t^{\text{buy}}=p_t E^{\text{plan}}_t+1.5\,p_t u_t-0.5\,p_t v_t
+    \label{eq:q3-lin-cost}
+  \end{equation}
+\end{subequations}
+
+式~\eqref{eq:q3-lin} 的线性化是\textbf{精确的}，无需引入 0--1 变量：
+给定差值 \(d_t=E^{\text{adj}}_t-E^{\text{plan}}_t\)，
+由式~\eqref{eq:q3-lin-diff} 有 \(u_t-v_t=d_t\)，代入式~\eqref{eq:q3-lin-cost} 得
+费用关于 \((u_t,v_t)\) 的表达式为 \(1.5p_tu_t-0.5p_tv_t\)；
+当 \(d_t\ge 0\) 时 \(u_t=d_t+v_t\)，费用为 \(1.5p_td_t+p_tv_t\)，最优取 \(v_t=0\)；
+当 \(d_t<0\) 时 \(v_t=u_t-d_t\)，费用为 \(0.5p_td_t+p_tu_t\)，最优取 \(u_t=0\)。
+即\textbf{最优解中必然有 \(\min(u_t,v_t)=0\)}，两个变量不会同时为正，
+式~\eqref{eq:q3-cost} 与该线性化完全等价。
+
+\begin{guideblock}
+这一段是"分段线性成本必须写出线性化形式与互斥性说明"的落实点：
+① 写出辅助变量与耦合等式；② 说明为何无需 0--1 变量（互斥由目标函数的最优性自动保证）；
+③ 数值上断言 \(\min(u_t,v_t)=0\) 全部成立。
+\end{guideblock}
+
+\subsection{场景树与非预期性约束}
+
+\begin{guideblock}
+本节是"多阶段做对了吗"的核心。必须写出\textbf{非预期性约束}的显式形式，
+并说明其\textbf{实现方式}（按节点分组施加等式约束 / 用指示矩阵），
+以及\textbf{如何验证没有使用未来信息}（泄漏测试）。
+\end{guideblock}
+
+以四个决策时刻为分支点构造\textbf{场景树}：根节点对应 \(0{:}00\)，
+其子节点对应 \(6{:}00\) 的预报实现，依此类推。
+记 \(\tau(t)\) 为不晚于时段 \(t\) 的最后一个决策时刻，即
+\(\tau(t)=0\) 当 \(t\in[1,36]\)，\(\tau(t)=6\) 当 \(t\in[37,72]\)，
+\(\tau(t)=12\) 当 \(t\in[73,108]\)，\(\tau(t)=18\) 当 \(t\in[109,144]\)。
+
+第一个决策时刻 \(0{:}00\) 的计划量对所有场景相同；
+时段 \(t\) 的调整量只能依赖\textbf{截至 \(\tau(t)\) 的信息}。
+设 \(\omega|_{[0,\tau]}\) 表示场景 \(\omega\) 在时刻 \(\tau\) 之前的历史，则非预期性约束为
+
+\begin{equation}
+  E^{\text{adj}}_t(\omega)=E^{\text{adj}}_t(\omega'),
+  \qquad
+  \forall\,\omega,\omega'\in\Omega:\ \
+  \omega|_{[0,\tau(t)]}=\omega'|_{[0,\tau(t)]}
+  \label{eq:q3-nonanticip}
+\end{equation}
+
+式~\eqref{eq:q3-nonanticip} 在实现上等价于：按场景树中\textbf{深度为 \(\tau(t)\) 的节点}
+对场景分组，对同组内的场景施加变量相等的线性约束（用指示矩阵实现）。
+在数值上，本文通过\textbf{泄漏测试}验证：把测试窗口的预报随机置换后重解，
+若计划量不发生变化，则说明计划未使用未来信息。
+
+\begin{guideblock}
+泄漏测试是"可证伪"的证据，比一句"我们没有用未来数据"强得多，务必做并报告结果。
+若置换后计划量发生变化，说明约束写错了——此时必须查非预期性的分组键。
+\end{guideblock}
+
+\subsection{多阶段滚动模型}
+
+综合式~\eqref{eq:q3-cost}--\eqref{eq:q3-nonanticip}，问题 3 的模型为
+
+\begin{subequations}\label{eq:q3}
+  \begin{equation}
+    \min\ \ \sum_{t=1}^{144}p_tE^{\text{plan}}_t
+    +\sum_{\omega\in\Omega}w_\omega\sum_{t=1}^{144}
+    \Bigl[1.5\,p_t\,u_t(\omega)-0.5\,p_t\,v_t(\omega)+5\,p_t\,g_t(\omega)\Bigr]
+    \label{eq:q3-obj}
+  \end{equation}
+  \begin{equation}
+    E^{\text{adj}}_t(\omega)-E^{\text{plan}}_t=u_t(\omega)-v_t(\omega),\qquad
+    u_t(\omega),v_t(\omega)\ge 0
+    \label{eq:q3-diff}
+  \end{equation}
+  \begin{equation}
+    g_t(\omega)\ \ge\ \bigl(L_{\omega,t}-PV_{\omega,t}\bigr)\Delta t+c_t-d_t
+    -E^{\text{adj}}_t(\omega),\qquad g_t(\omega)\ge 0
+    \label{eq:q3-gap}
+  \end{equation}
+  \begin{equation}
+    S_t=S_{t-1}+\eta_c c_t-\frac{d_t}{\eta_d},\quad
+    \underline S\le S_t\le\overline S,\quad
+    0\le c_t,d_t\le\overline P\Delta t,\quad
+    S_0=S^{init},\ S_T\ge\underline S
+    \label{eq:q3-soc}
+  \end{equation}
+  \begin{equation}
+    E^{\text{plan}}_t\ \text{与}\ \omega\ \text{无关};\qquad
+    E^{\text{adj}}_t\ \text{满足式}~\eqref{eq:q3-nonanticip}
+    \label{eq:q3-na-ref}
+  \end{equation}
+\end{subequations}
+
+式~\eqref{eq:q3-obj} 的第一项是 \(0{:}00\) 计划相关的确定性费用，
+第二项是场景期望下的紧急购电与调整相关费用；
+式~\eqref{eq:q3-gap} 的缺口以\textbf{调整后}的购电量 \(E^{\text{adj}}_t(\omega)\) 为基准，
+体现"调整决策后覆盖前"（假设 A7）。
+本文在该模型中只让\textbf{购电量}随信息修正，
+充放电计划仍在 \(0{:}00\) 确定；"允许充放电随预报滚动修正"的变体在第九章对照。
+
+\subsection{信息价值：是否需要引入其他时刻的预报}
+
+\begin{guideblock}
+这是题面\textbf{直接追问}的一问，必须给出量化答案，且必须同时给出\textbf{成本侧}：
+"加密预报能省多少钱"与"加密预报要花多少钱"两笔账要一起算，
+否则结论不可用。五组对照必须在\textbf{同一场景集}上跑完。
+\end{guideblock}
+
+为回答"是否需要引入其他时刻的预报制定调整购电策略"，
+本文设计\textbf{预报频次对照实验}：令可用预报时刻数为 \(n\in\{1,2,4,8,24\}\)，
+其中 \(n=1\) 仅用 \(0{:}00\) 预报（即问题 2 的结构），
+\(n=4\) 即题面给定情形，\(n=8,24\) 为加密情形，
+其余 \(n\) 情形按等间隔插入预报时刻并在同一场景集上重解。
+
+\begin{equation}
+  \mathrm{VoI}(n)=\frac{C(1)-C(n)}{C(1)}\times 100\%
+  \label{eq:q3-voi}
+\end{equation}
+
+结果见表~\ref{tab:voi} 与图~\ref{fig:voi}。
+
+\begin{table}[htbp]
+  \centering
+  \caption{预报频次对照实验：总费用、边际节省与信息价值（同一场景集，单位：元）}
+  \label{tab:voi}
+  \footnotesize
+  \begin{tabularx}{\linewidth}{C{1.4cm} C{2.4cm} C{2.6cm} C{2.8cm} Y}
+    \toprule
+    预报时刻数 \(n\) & 总费用 & 边际节省 & 累计信息价值 & 相对 \(n=1\) 的降幅 \\
+    \midrule
+    1  & \ph & --- & 0    & 0 \\
+    2  & \ph & \ph & \ph  & \ph \\
+    4  & \ph & \ph & \ph  & \ph \\
+    8  & \ph & \ph & \ph  & \ph \\
+    24 & \ph & \ph & \ph  & \ph \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\begin{figure}[htbp]
+  \centering
+  \includefig[width=0.95\linewidth]{fig06_voi_curve.pdf}
+  \caption{信息价值曲线（双纵轴：左轴为总费用，横轴为对数刻度的预报时刻数 \(n\)；
+           右轴柱形为相邻档位间的边际节省；竖直虚线标出题面给定的 \(n=4\)；
+           阴影为 \(\pm 0.5\%\) 平稳带，标注收益饱和点；数据为同一固定场景集）}
+  \label{fig:voi}
+\end{figure}
+
+由表~\ref{tab:voi} 与图~\ref{fig:voi} 可得：总费用随 \(n\) 增大而单调下降，
+但\textbf{边际节省迅速衰减}，在 \(n=\ph\) 之后进入 \(\pm 0.5\%\) 的平稳带；
+从 \(n=4\) 加密到 \(n=\ph\) 仅再节省 \ph~元（占总费用 \ph）。
+另一方面，加密预报需要额外的通信、预测与运维投入，
+按 \ph~元/天·新增时刻估算，加密到 \(n=8\) 的\textbf{年化成本}约为 \ph~元，
+\ph~同期收益 \ph~元。因此本文的结论是：\textbf{\ph}。
+
+\begin{guideblock}
+结论段必须同时给出\textbf{收益侧与成本侧}并明确"是否需要"，
+且必须声明这只在本题的误差结构与惩罚倍数下成立——
+若紧急购电倍数 \(\kappa\) 或预报误差水平改变，需要重新计算（写进边界条件）。
+这段是评审判决"有想法吗"的高频落点。
+\end{guideblock}
+
+\subsection{求解结果}
+
+在同一场景集上求解式~\eqref{eq:q3}，
+\(0{:}00\) 计划对应的总费用为 \ph~元，滚动调整后的实际总费用为 \ph~元，
+其中违约费用 \ph~元、超额费用 \ph~元、紧急购电费用 \ph~元，
+紧急购电量 \ph~kWh。相对问题 2 的两阶段结构，费用由 \ph~元降至 \ph~元，
+信息价值 \ph（口径见式~\eqref{eq:q3-voi}）。
+按题面表 1、表 2、表 3 格式给出的指定日期结果见第八章表~\ref{tab:q3-tables}。

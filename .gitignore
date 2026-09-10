@@ -1,0 +1,34 @@
+# ---- macOS ----
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# ---- Office / WPS 临时文件 ----
+~$*
+.~*
+*.tmp
+
+# ---- 压缩包（与已解压目录内容重复） ----
+*.zip
+*.rar
+*.7z
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.venv/
+venv/
+
+# ---- MATLAB ----
+*.asv
+*.m~
+
+# ---- 编辑器 ----
+.vscode/
+.idea/
+
+# ---- 求解与结果输出（如需纳入版本管理请删除以下行） ----
+outputs/
+*.log

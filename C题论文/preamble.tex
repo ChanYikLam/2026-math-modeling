@@ -179,6 +179,11 @@
 % 7. 超链接与 PDF 元数据（第六条：元数据不得含身份信息）
 % ---------------------------------------------------------------------------
 % 黑体改用 PingFang SC：STHeiti 在 macOS 下 ToUnicode 生成失败会导致 PDF 文字无法复制
+% 正文与黑体均启用伪粗体：macOS 的 Songti SC Bold 不嵌入 ToUnicode，
+% 直接用 \textbf 会让加粗中文在复制时变成乱码；伪粗体由常规字重合成，可正常复制。
+\setCJKmainfont{Songti SC}[AutoFakeBold=2.2]
+\setCJKsansfont{Songti SC}[AutoFakeBold=2.2]
+\setCJKmonofont{Songti SC}[AutoFakeBold=2.2]
 \setCJKfamilyfont{zhhei}{PingFang SC}[BoldFont=PingFang SC Semibold]
 \renewcommand{\heiti}{\CJKfamily{zhhei}}
 \usepackage[hidelinks,bookmarks=true,bookmarksnumbered=false]{hyperref}

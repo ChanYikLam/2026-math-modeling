@@ -205,6 +205,13 @@
 按 \ph~元/天·新增时刻估算，加密到 \(n=8\) 的\textbf{年化成本}约为 \ph~元，
 \ph~同期收益 \ph~元。因此本文的结论是：\textbf{\ph}。
 
+为检查滚动实现是否正确，本文在同一场景集、同一费用口径下同时计算完美信息（PI）、滚动（\(n=4\)）、两阶段（\(n=1\)）与开环四组费用，并验证不等式链
+\begin{equation}
+  C_{\mathrm{PI}}\ \le\ C_{\mathrm{rolling}}\ \le\ C_{n=1}\ \le\ C_{\text{open-loop}}.
+  \label{eq:q3-ineq}
+\end{equation}
+若数值违反该链，说明非预期性、信息集或结算口径实现有误，须先修正再解读 VoI。
+
 \begin{guideblock}
 结论段必须同时给出\textbf{收益侧与成本侧}并明确"是否需要"，
 且必须声明这只在本题的误差结构与惩罚倍数下成立——

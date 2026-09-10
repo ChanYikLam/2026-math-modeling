@@ -174,13 +174,17 @@
 命题 \ref{prop:threshold} 成立于"纯套利子问题且储电量界不活跃"；
 当 \(\underline S\) 或 \(\overline S\) 活跃时，须回到互补松弛形式
 式~\eqref{eq:q1-kkt-c}--\eqref{eq:q1-kkt-d}，并额外计入界乘子 \(\lambda^{\pm}_t\)。
-数值验证要报"阈值律一致性检验违反次数为 0"以及两条恒等式的偏差量级
-（目标 \(\le 10^{-16}\)）。
+数值验证要报"在纯套利子问题/界不活跃时，阈值律一致性检验违反次数为 0"以及两条恒等式的偏差量级
+（目标 \(\le 10^{-16}\)）；完整 P1 只报互补松弛式的残差，不把简单阈值当精确刻画。
 \end{guideblock}
 
 水价值 \(\mu_t\) 的物理意义是"多留 1~kWh 电在储能里能省多少钱"，
 它随储电量水平单调不增（容量越宽松，边际价值越低）。
-该曲线是判断"容量是否仍是瓶颈"的直接依据（图~\ref{fig:watervalue}）。
+该曲线是判断"容量摆幅是否仍是瓶颈"的直接依据；充电功率的边际价值须由式~\eqref{eq:q1-power} 的对偶量另行报告。本文同时给出容量与充放功率的双向扫描，结论统一表述为\textbf{"容量摆幅与充电功率同为紧约束，放电功率不紧"}（图~\ref{fig:watervalue}）。
+
+\begin{guideblock}
+容量/功率边际价值图的图注与结论必须同时满足两条：① 容量扫描须同步移动 \(\underline S\) 与 \(\overline S\)（保持 10\%--90\% DOD），并把结论限定在对应运行区间；② 必须给出功率上限 \ph/5000/\ph~kW 的对照，结论只能写"容量摆幅与充电功率同为紧约束，放电功率不紧"，不得写"容量是唯一瓶颈"或"功率不是瓶颈"。
+\end{guideblock}
 
 \begin{figure}[htbp]
   \centering
@@ -196,8 +200,9 @@
   \includefig[width=0.95\linewidth]{fig03_q1_dual_price.pdf}
   \caption{最优性证书：电价与水价值阈值（上子图：电价 \(p_t\) 与储电边际价值 \(\mu_{t}\)，
            虚线为充电阈值 \(\eta_c\mu_{t}\) 与放电阈值 \(\mu_{t}/\eta_d\)，阴影为死区；
-           下子图：最优充电量与放电量。上下子图共享时间轴并竖直对齐，
-           阈值律一致性检验违反次数为 0）}
+           下子图：最优充电量与放电量。上下子图共享时间轴并竖直对齐；
+           阈值律一致性检验在\textbf{纯套利子问题/储电量界不活跃}时违反次数为 0，
+           完整 P1 在界活跃时段回退到互补松弛式~\eqref{eq:q1-kkt-c}--\eqref{eq:q1-kkt-d}）}
   \label{fig:dualprice}
 \end{figure}
 
@@ -233,6 +238,18 @@
     \bottomrule
   \end{tabularx}
 \end{table}
+
+\paragraph{成本分解恒等式}
+由式~\eqref{eq:q1-balance} 解出 \(E_t\) 并代入目标，可得
+\begin{equation}
+  \sum_t p_tE_t
+  =\underbrace{\sum_t p_t\Delta t\max(L_t-PV_t,0)}_{C^{base}}
+  +\underbrace{\sum_t p_t\bigl(\Delta t\min(L_t-PV_t,0)+c_t-d_t+s_t\bigr)}_{C^{batt}},
+  \label{eq:q1-decomp}
+\end{equation}
+其中 \(C^{batt}\) 为储能与弃光引起的成本增量。式~\eqref{eq:q1-decomp} 是\textbf{逐项恒等式}，
+不是"把最优值拆成两个独立最优值之和"；\(C^{batt}\) 的最小化仍需求解式~\eqref{eq:q1-obj}--\eqref{eq:q1-nonneg}。
+它把结果章的"节省率"改写为 \(C^*=C^{base}-V^{arb}\)，并与口径 C-01 相互印证。
 
 \subsection{求解结果}
 

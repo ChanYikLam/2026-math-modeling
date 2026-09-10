@@ -1,0 +1,55 @@
+%!TEX program = xelatex
+% =============================================================================
+%  2026 高教社杯全国大学生数学建模竞赛  C 题
+%  《微网与外部电网电力调控策略》论文 —— 主文件
+%
+%  编译：./build.sh        （或 xelatex main.tex 连编两遍）
+%  定稿：把 preamble.tex 中 \drafttrue 改为 \draftfalse，再跑 tools/check_paper.py
+%
+%  目录结构
+%     main.tex                 本文件（只做装配，不写正文）
+%     preamble.tex             导言区：格式合规配置 + 写作宏
+%     sections/00_abstract.tex 摘要专用页（自本页起页码为 1）
+%     sections/01..10          正文十章
+%     sections/refs.tex        参考文献（GB/T 7714）
+%     sections/90_appendix.tex 附录（页数不限）
+%     figures/                 图片（fig01/fig02 为 TikZ 源文件，其余为 PDF）
+%     code/                    附录所列源程序（由 lstinputlisting 原样引入）
+%     tools/check_paper.py     提交前合规自查
+%
+%  ⚠️ 全文不得出现学校、队号、姓名、赛区信息（格式规范第六条）
+%  ⚠️ 不要加入 \tableofcontents（格式规范第四条：不要目录）
+% =============================================================================
+\documentclass[10pt,a4paper]{ctexart}
+\input{preamble}
+
+\begin{document}
+
+% ---- 摘要专用页（电子版第 1 页，页码 1） ----------------------------------
+\input{sections/00_abstract}
+
+% ---- 正文（≤30 页，无目录） -----------------------------------------------
+\input{sections/01_problem}
+\input{sections/02_assumptions}
+\input{sections/03_data}
+\input{sections/04_q1}
+\input{sections/05_q2}
+\input{sections/06_q3}
+\input{sections/07_q4}
+\input{sections/08_results}
+\input{sections/09_validation}
+\input{sections/10_evaluation}
+
+% ---- 参考文献 --------------------------------------------------------------
+\input{sections/refs}
+
+% 正文结束页标记：tools/check_paper.py 用它核算正文页数是否 ≤30
+\label{pg:bodyend}
+
+% ---- 附录（页数不限，须与正文一起打印装订） --------------------------------
+\clearpage
+\appendix
+\ctexset{section={name={附录\,},number=\Alph{section},aftername=\quad}}
+\input{sections/90_appendix}
+
+\end{document}

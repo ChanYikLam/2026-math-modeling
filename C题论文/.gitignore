@@ -1,0 +1,17 @@
+# ---- 编译与缓存 ----
+build/
+!build/.gitkeep
+final.flag
+__pycache__/
+*.pyc
+
+# ---- 逐日解转储（体积大，run_all.py 可重建；附录 A 已声明不随支撑材料）----
+intermediate/q2_*.json
+intermediate/q3_*.json
+intermediate/q4_2.json
+intermediate/q4_3.json
+intermediate/reg_solution.npy
+!intermediate/q2_main.json
+
+# ---- 中间产物 ----
+support.zip

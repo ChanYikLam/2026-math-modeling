@@ -1,0 +1,7 @@
+# C 题论文复现环境（实测版本，macOS 15.7.5 / arm64）
+numpy==2.4.3
+pandas==3.0.1
+scipy==1.18.1
+openpyxl==3.1.5
+matplotlib==3.11.1
+scikit-learn==1.9.0

@@ -1,0 +1,1000 @@
+%!TEX root = ../main.tex
+% =============================================================================
+%  附录（格式规范第四条：页数不限，必须打印并与正文装订在一起提交）
+%  附录必备八项（依据 format2026.doc 第五条、第十一条）：
+%    1 支撑材料文件清单        -> 附录 A  ← 必需
+%    2 全部完整、可运行的源程序 -> 附录 E  ← 缺少可能被取消评奖资格
+%    3 运行环境与依赖版本      -> 附录 B
+%    4 运行说明               -> 附录 B
+%    5 随机种子清单            -> 附录 H
+%    6 结果文件与论文表格对应表 -> 附录 C
+%    7 数据字典               -> 附录 F
+%    8 较长的推导              -> 附录 G
+%  ⚠️ 若确实没有用到程序，须写明「本论文没有用到程序」（第五条）
+%  ⚠️ 若确实没有支撑材料，须注明「本论文没有支撑材料」（第十一条）
+%  ⚠️ 附录中同样不得出现任何身份信息（第六条）：校名、队伍编号、姓名、所在区域一律不写
+%  ⚠️ 附录 A 的文件清单与附录 E 的 \codefile 清单都按工程**实际文件**逐项写，
+%     新增脚本或结果文件必须同步补入这两处（附录 E 缺文件会被判为红线）。
+% =============================================================================
+
+\section{支撑材料文件清单}
+
+支撑材料压缩包 \texttt{support.zip} 打包本工程「可复现必需」的文件：论文源文件、全部源程序、
+五个结果文件、八张数据图的矢量文件，以及作为论文数字来源的汇总类中间结果。
+下表与本工程下的实际文件逐项对应；附录~\ref{sec:app-code} 所列源程序与本表的 \texttt{code/} 完全一致。
+
+\begin{lstlisting}[style=plain,basicstyle=\ttfamily\footnotesize\songti]
+support.zip
++-- main.tex                        论文装配（宏包输入、附录起点、正文结束标记）
++-- preamble.tex                    导言区：格式合规配置与写作宏（口径框/证据号/占位符）
++-- build.sh                        编译入口（自动探测 latexmk+xelatex / xelatex / tectonic）
++-- sections/                       正文与附录源文件，13 个
+|   +-- 00_abstract.tex             摘要专用页
+|   +-- 01_problem.tex              一、问题重述与分析
+|   +-- 02_assumptions.tex          二、模型假设与符号说明
+|   +-- 03_data.tex                 三、数据预处理与特征分析
+|   +-- 04_q1.tex                   四、问题 1 模型
+|   +-- 05_q2.tex                   五、问题 2 模型
+|   +-- 06_q3.tex                   六、问题 3 模型
+|   +-- 07_q4.tex                   七、问题 4 模型
+|   +-- 08_results.tex              八、结果与分析
+|   +-- 09_validation.tex           九、模型检验与灵敏度
+|   +-- 10_evaluation.tex           十、模型评价与推广
+|   +-- refs.tex                    参考文献（GB/T 7714）
+|   +-- 90_appendix.tex             本附录
+|
++-- tools/
+|   +-- check_paper.py              提交前合规自查（--strict 为定稿模式）
+|   +-- check_numbers.py            论文数字与数值台账的机械对拍
+|
++-- code/                           全部源程序，与附录 E 逐项一致
+|   +-- config.py                   口径、参数与附件读取（全文唯一参数来源）
+|   +-- lp_engine.py                单日两阶段 LP、滚动子问题 LP、场景削减
+|   +-- q1.py  q2.py  q3.py  q4.py  四问求解与结果文件写出
+|   +-- results_io.py               结果工作表写出器（按附件 5 模板的列序）
+|   +-- exp_scan.py                 容量/功率/效率扫描与报童经验覆盖率
+|   +-- exp_sobol.py                全局灵敏度（Sobol 指数）
+|   +-- exp_na.py                   非预期性置换检验
+|   +-- exp_benchmark.py            全年单一 LP 基准实验（完美信息参照）
+|   +-- audit.py                    独立审计 A1--A10（不共用建模费用函数）
+|   +-- paper_numbers.py            汇总数值台账 paper_numbers.json
+|   +-- plot_figures.py             八张数据图的绘图脚本
+|   +-- run_all.py                  一键复现
+|   +-- requirements.txt            依赖清单（版本锁定）
+|
++-- results/                        五个结果文件（工作表名与列序按附件 5 模板）
+|   +-- result1.xlsx                问题 1（典型日）：计划购电量、充放电量
+|   +-- result2.xlsx                问题 2：计划购电量、充放电量、紧急购电量
+|   +-- result3.xlsx                问题 3：计划购电量、调整购电量、充放电量、紧急购电量
+|   +-- result4-2.xlsx              问题 4-2：与 result2 同结构
+|   +-- result4-3.xlsx              问题 4-3：与 result3 同结构
+|
++-- figures/                        图 1 至图 10
+|   +-- fig01_timeline.tex          图 1 决策时序图（TikZ 源文件）
+|   +-- fig02_dependency.tex        图 2 问题依赖图（TikZ 源文件）
+|   +-- fig03_q1_dual_price.pdf     电价、水价值与阈值型策略（问题 1）
+|   +-- fig04_q1_capacity_power.pdf 容量与充放功率上限双向扫描（问题 1）
+|   +-- fig05_cost_waterfall.pdf    问题 1 成本分解瀑布
+|   +-- fig06_voi.pdf               信息价值曲线（问题 3）
+|   +-- fig07_q2_emergency.pdf      逐日紧急购电与报童两界（问题 2）
+|   +-- fig08_q4_price.pdf          电价过程骨架与残差结构（问题 4）
+|   +-- fig09_cvar_frontier.pdf     CVaR 风险--费用前沿与真实回测（问题 4）
+|   +-- fig10_strategy_mechanism.pdf 最优策略机制（问题 1）
+|   +-- README.md                   图规格、配色语义与出图约定
+|
++-- intermediate/                   中间结果（论文数字的来源），分两组
+|   +-- 随包提交（汇总与审计类，单个不超过 0.21 MB）
+|   |   +-- audit.json  audit_report.md          审计 A1--A10（附录 D 的机器可读与可读版）
+|   |   +-- paper_numbers.json                   数值台账（对拍基准，含四问、对偶、消融、Sobol、CVaR）
+|   |   +-- q1.json  q1_dual.json  q1_dual2.json 问题 1 解与最优性证书
+|   |   +-- q2_margin.json  exp_benchmark.json  安全边际分解、全年单一 LP 基准
+|   |   +-- q4_price.json  q4_cvar.json          电价过程检验与情景保真度、CVaR 前沿
+|   |   +-- exp_scan.json  exp_sobol.json  exp_na.json  扫描、灵敏度、非预期性
+|   |   +-- full_year_lp.txt                     全年单一 LP（完美信息参照）的目标值
+|   +-- 不随包（逐日解转储，单个 2.7--4.4 MB，可由 run_all.py 一键重建）
+|       +-- q2_main.json  q2_noMargin.json  q2_cmp_R1.json  q2_cmp_R2.json  q2_cmp_R3.json
+|       +-- q2_K120.json  q2_full_strat.json  q2_term_R1_eq.json  q2_term_R1_free.json
+|       +-- q2_term_R3_free.json  q3_n1.json  q3_n2.json  q3_n4.json  q3_perf.json
+|       +-- q4_2.json  q4_3.json
+|
++-- notes/                          口径与台账文档，7 个
+    +-- 写作交底.md                 本队实际模型口径（唯一口径说明）
+    +-- 数值台账.md                 论文数字的表格版台账
+    +-- A_坑点与验证.md  B_模型与算法.md  C_写作规范.md
+    +-- D_行业与引用.md  E_知识点与模板.md
+\end{lstlisting}
+
+三点说明：
+
+\begin{enumerate}
+  \item \textbf{体积}：上述随包内容合计约 3.4~MB（其中五个结果文件约 2.1~MB、
+        八张数据图约 0.3~MB），低于支撑材料压缩包 20~MB 的上限（格式规范第十一条）。
+  \item \textbf{中间结果分级打包}：\texttt{intermediate/} 下第二组\textbf{逐日解转储}
+        （\texttt{q2\_main.json}、\texttt{q2\_noMargin.json}、\texttt{q3\_n4.json}、\texttt{q4\_2.json} 等，
+        单个 2.7--4.4~MB）可由 \texttt{python3 code/run\_all.py} 一键重建，
+        且其中每个进入论文的数字都已汇总进 \texttt{paper\_numbers.json}，故不随压缩包提交；
+        包内保留体积小、且为论文数字与审计直接依据的汇总类文件（上表已逐一列出）。
+  \item \textbf{不随包提交的中间产物}：LaTeX 编译产物、Python 字节码缓存、以下划线开头的临时脚本与
+        \texttt{.npy} 临时数组，均为可再生的工作文件，不属于支撑材料。
+\end{enumerate}
+
+\section{运行环境与运行说明}
+
+\paragraph{运行环境}
+
+\begin{table}[htbp]
+  \centering
+  \caption{运行环境与依赖版本（版本锁定，实测于单机 macOS 15.7.5 / arm64）}
+  \label{tab:env}
+  \footnotesize
+  \begin{tabularx}{\linewidth}{L{3.4cm} L{4.6cm} Y}
+    \toprule
+    项目 & 版本 & 说明 \\
+    \midrule
+    操作系统 & macOS 15.7.5（arm64，Build 24G624） & 全部求解、审计与出图单机完成，未使用集群 \\
+    Python & 3.13.12 & 唯一解释器 \\
+    NumPy / pandas & 2.4.3 / 3.0.1 & 数组运算与附件 \texttt{.xlsx} 读写 \\
+    SciPy & 1.18.1 & 线性规划 \texttt{linprog} 与统计检验 \\
+    求解器 & SciPy \texttt{linprog(method="highs")}，HiGHS 后端（随 SciPy 1.18.1 分发）
+      & 四问模型在场景离散后均为 LP，由 HiGHS 精确求解，未使用商业求解器 \\
+    Matplotlib & 3.11.1 & 图 3--图 10 的数据图；图 1、图 2 为 TikZ 源文件，由 XeLaTeX 排版 \\
+    scikit-learn & 1.9.0 & 仅用于 $k$-means 场景削减的对照路径 \\
+    openpyxl & 3.1.5 & 结果文件 \texttt{.xlsx} 的读写 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+依赖清单锁定在 \texttt{code/requirements.txt}（\texttt{numpy==2.4.3}、\texttt{pandas==3.0.1}、
+\texttt{scipy==1.18.1}、\texttt{openpyxl==3.1.5}、\texttt{matplotlib==3.11.1}、
+\texttt{scikit-learn==1.9.0}），版本号写确切值、不写区间。
+
+\paragraph{运行说明}
+
+\begin{enumerate}
+  \item \textbf{依赖安装}：\texttt{python3 -m pip install -r code/requirements.txt}；
+  \item \textbf{数据就位}：把附件 1--4 与附件 5 模板放在工作区的
+        \texttt{CUMCM2026Problems(1)/C题/附件/}（模板置于其 \texttt{附件5/} 子文件夹）。
+        该路径由 \texttt{code/config.py} 的 \texttt{ATTACH\_DIR} 给出，并由脚本自身位置反推，
+        整个工程文件夹移动后无需改动代码；
+  \item \textbf{依次运行四问}（在 \texttt{code/} 下执行，命令参数即论文主口径）：
+
+\begin{lstlisting}[style=plain,basicstyle=\ttfamily\footnotesize\songti]
+python3 q1.py                                                      # 问题 1：典型日 LP
+python3 q2.py --tag main --K 60 --scen strat --info R3 --write    # 问题 2：334 天
+python3 q3.py --epochs 0,6,12,18 --tag n4 --K 60 --write          # 问题 3：四次预报
+python3 q4.py --mode q42 --K 64 --write                           # 问题 4-2：波动电价
+python3 q4.py --mode q43 --K 64 --write                           # 问题 4-3：滚动
+\end{lstlisting}
+
+        \texttt{--write} 表示按附件 5 模板写出对应结果文件；
+        条件项（论文中作为对照或检验给出）另有：\texttt{q4.py --mode tests --K 64}（电价过程检验与
+        情景保真度）、\texttt{q4.py --mode cvar --K 64 --step 6}（CVaR 前沿）、
+        \texttt{exp\_scan.py}（容量、功率与效率扫描、报童经验覆盖率）、
+        \texttt{exp\_sobol.py}（Sobol 全局灵敏度）、\texttt{exp\_na.py}（非预期性置换检验）、
+        \texttt{exp\_benchmark.py}（全年单一 LP 的完美信息基准）、
+        \texttt{plot\_figures.py}（八张数据图）；
+  \item \textbf{独立审计}：\texttt{python3 audit.py}。脚本只读原始附件与五个结果文件，
+        独立复算 A1--A10，写出 \texttt{intermediate/audit.json} 与 \texttt{audit\_report.md}；
+  \item \textbf{数值台账}：\texttt{python3 paper\_numbers.py}，把全部中间结果汇总为
+        \texttt{intermediate/paper\_numbers.json}（论文数字的对拍基准）；
+  \item \textbf{对拍与自查}：\texttt{python3 ../tools/check\_numbers.py} 列出论文中找不到
+        台账出处的数字；\texttt{python3 ../tools/check\_paper.py --strict} 做定稿模式合规自查
+        （占位符、禁令词、身份信息、缺图与缺源码、页数与摘要页）。
+\end{enumerate}
+
+\noindent\textbf{一键复现}：\texttt{python3 run\_all.py} 按上述顺序自动执行问题 1--4、
+扫描、审计与台账；加 \texttt{--fast} 参数则跳过信息结构、场景数、VoI 与 CVaR 等对照实验。
+
+\paragraph{实测耗时}
+
+\begin{table}[htbp]
+  \centering
+  \caption{单机实测耗时（macOS 15.7.5 / arm64 / Python 3.13.12，与正文同一份代码与数据）}
+  \label{tab:runtime}
+  \footnotesize
+  \begin{tabularx}{\linewidth}{L{4.0cm} L{2.0cm} Y}
+    \toprule
+    步骤 & 实测耗时 & 规模与说明 \\
+    \midrule
+    问题 1（典型日，确定性 LP） & 不足 0.1~s & 单日 144 槽；两次实测 0.014~s 与 0.008~s（纯求解时间） \\
+    问题 2（固定价，两阶段） & 约 30~s & 334 天逐日两阶段子问题（$K=60$ 个场景） \\
+    问题 3（固定价，四次预报） & 约 72~s & 四个预报时刻 $\times$ 334 天的滚动子问题 \\
+    问题 4-2（波动电价，两阶段） & 约 50~s & 334 天逐日两阶段子问题（$K=64$ 个联合情景） \\
+    问题 4-3（波动电价，四次预报） & 约 101~s & 四个预报时刻 $\times$ 334 天的滚动子问题 \\
+    独立审计（A1--A10） & 约 13~s & 两次实测 12.9~s 与 16.7~s；其中交付物复算 3.3~s、逐日解复算 10.1~s \\
+    \midrule
+    合计（四问主链 $+$ 审计） & 约 4.4~min & 单机完成，无需集群或并行 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\noindent\textbf{输出文件}：\texttt{results/} 下的五个结果文件（\texttt{result1.xlsx}、
+\texttt{result2.xlsx}、\texttt{result3.xlsx}、\texttt{result4-2.xlsx}、\texttt{result4-3.xlsx}）；
+\texttt{figures/} 下的八张矢量图（图 3--图 10）与两张 TikZ 源文件（图 1、图 2）；
+\texttt{intermediate/} 下的审计报告、数值台账与各问中间结果。
+
+\section{结果文件、论文表格与生成函数}\label{sec:app-filemap}
+
+五个结果文件均按附件 5 模板的工作表名、列名与列序写出：\texttt{result1.xlsx} 为竖表
+（一个时段一行，对应表~\ref{tab:q1-buy} 与表~\ref{tab:q1-soc}）；其余四个文件为横表
+（一天一行，147 列 $=$ 日期 $+$ 144 个时段 $+$ 全天购电量 $+$ 全天购电费）。
+
+\begin{table}[htbp]
+  \centering
+  \caption{结果文件 $\leftrightarrow$ 论文表格 $\leftrightarrow$ 生成函数 对应表}
+  \label{tab:filemap}
+  \footnotesize
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabularx}{\linewidth}{L{3.4cm} L{2.4cm} L{4.0cm} Y}
+    \toprule
+    结果文件（工作表） & 论文位置 & 生成函数 & 行数与中间结果 \\
+    \midrule
+    result1.xlsx（计划购电量） & 表~\ref{tab:q1-buy}
+      & \texttt{q1.solve\_q1} $\rightarrow$ \texttt{q1.write\_result1}
+      & 144 行（1 行 1 个 10~min 槽）；\texttt{q1.json} \\
+    result1.xlsx（充放电量） & 表~\ref{tab:q1-soc}
+      & \texttt{q1.write\_result1}
+      & 6 行（4~h 块）$+$ $0{:}00$ 与 $24{:}00$ 储电量；\texttt{q1.json} \\
+    result2.xlsx（计划购电量） & 表~\ref{tab:q2-buy}、表~\ref{tab:q2-t1}、表~\ref{tab:summary}
+      & \texttt{q2.run\_q2} $\rightarrow$ \texttt{results\_io.write\_result}
+      & 334 行 $\times$ 147 列；\texttt{q2\_main.json} \\
+    result2.xlsx（充放电量） & 表~\ref{tab:q2-soc}、表~\ref{tab:q2-t2} & 同上
+      & 2\,004 行（334 天 $\times$ 6 个 4~h 块） \\
+    result2.xlsx（紧急购电量） & 表~\ref{tab:q2-emergency}、表~\ref{tab:emergency} & 同上
+      & 1\,156 行（缺口时段合并，同一日期可多行） \\
+    result3.xlsx（计划购电量、调整购电量） & 表~\ref{tab:q3-epochs}（决策时刻与生效槽位）、表~\ref{tab:key4}
+      & \texttt{q3.run\_q3} $\rightarrow$ \texttt{results\_io.write\_result}
+      & 各 334 行 $\times$ 147 列；\texttt{q3\_n4.json} \\
+    result3.xlsx（充放电量、紧急购电量） & 表~\ref{tab:key4}、表~\ref{tab:summary} & 同上
+      & 2\,004 行 / 1\,190 行 \\
+    result4-2.xlsx（计划购电量、充放电量、紧急购电量） & 表~\ref{tab:q4-summary}、表~\ref{tab:key4}、表~\ref{tab:summary}
+      & \texttt{q4.run\_q4\_2} $\rightarrow$ \texttt{results\_io.write\_result}
+      & 334 $\times$ 147、2\,004、1\,193 行；\texttt{q4\_2.json} \\
+    result4-3.xlsx（计划购电量、调整购电量、充放电量、紧急购电量） & 表~\ref{tab:q4-summary}、表~\ref{tab:key4}
+      & \texttt{q4.run\_q4\_3} $\rightarrow$ \texttt{results\_io.write\_result}
+      & 334 $\times$ 147（两次）、2\,004、1\,187 行；\texttt{q4\_3.json} \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+表中「生成函数」为模块内的真实函数名：\texttt{q2.run\_q2}、\texttt{q3.run\_q3}、
+\texttt{q4.run\_q4\_2}、\texttt{q4.run\_q4\_3} 完成求解，由各脚本的 \texttt{main()} 装配后
+统一调用 \texttt{results\_io.write\_result} 写出工作簿；问题 1 的竖表由 \texttt{q1.solve\_q1} 求解、
+\texttt{q1.write\_result1} 写出。论文其余图表不来自结果文件，其来源为：最优性证书取自
+\texttt{q1\_dual.json} 与 \texttt{q1\_dual2.json}（\texttt{q1.py} 的对偶校验），
+CVaR 前沿取自 \texttt{q4\_cvar.json}（\texttt{q4.py --mode cvar}，底层函数 \texttt{q4.solve\_cvar\_day}），
+全局灵敏度取自 \texttt{exp\_sobol.json}，非预期性置换检验取自 \texttt{exp\_na.json}。
+
+\section{独立审计报告}
+
+审计由\textbf{非建模实现者}独立完成：脚本 \texttt{code/audit.py} 只读原始附件与本队写出的五个结果文件，
+\textbf{不共用建模代码的费用函数与约束构造函数}，以保证「自证循环」不会发生。
+机器可读结果在 \texttt{intermediate/audit.json}，可读报告在 \texttt{intermediate/audit\_report.md}。
+
+\paragraph{审计口径与阈值}
+
+\begin{itemize}
+  \item \textbf{残差}：模型内部解（10~min 槽级、未取整）阈值 $10^{-6}$~kWh；
+        交付物（结果文件只给 4~h 块级充放电量与 $0{:}00$、$24{:}00$ 两个储电量）的电量按
+        $10^{-4}$~kWh 取整后回读，块级递推残差的上界为
+        $0.5\times10^{-4}+0.9\times6\times0.5\times10^{-4}+6\times0.5\times10^{-4}/0.9+0.5\times10^{-4}=7.0\times10^{-4}$~kWh，
+        故交付物的残差阈值取 $10^{-3}$~kWh
+        （贴合交付精度的判定，不放松内部解的口径）；
+  \item \textbf{越界数与违反数}：储电量越界、充放电功率越界、充放互斥违反、负电量，全部要求等于 $0$；
+  \item \textbf{费用复算相对误差}：$\le10^{-4}$（费用只用结果文件与附件逐时段重算，不调用建模费用函数）。
+\end{itemize}
+
+\paragraph{逐项结果}
+
+\begin{table}[htbp]
+  \centering
+  \caption{独立审计 A1--A10：阈值、实测值与判定（「内」为 10~min 级模型内部解，「交」为结果文件块级）}
+  \label{tab:audit-appendix}
+  \footnotesize
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabularx}{\linewidth}{C{0.9cm} L{3.4cm} L{2.9cm} Y C{1.2cm}}
+    \toprule
+    项 & 检查内容 & 阈值 & 实测值 & 判定 \\
+    \midrule
+    A1 & 电量平衡残差 & $\max\lvert E_t+PV_t\Delta t+d_t+g_t-L_t\Delta t-c_t-s_t\rvert\le10^{-6}$~kWh
+       & 内：问题 1 为 $1.49\times10^{-13}$，问题 2、3 均为 $3.41\times10^{-13}$ & PASS \\
+    A2 & 储电量递推残差 & 内 $\le10^{-6}$~kWh；交 $\le10^{-3}$~kWh
+       & 内：$9.09\times10^{-13}$（问题 1）、$1.09\times10^{-11}$（问题 2、3）；交（问题 1、2、3、4-2、4-3）：$3.64\times10^{-12}$、$2.96\times10^{-4}$、$2.72\times10^{-4}$、$2.11\times10^{-4}$、$2.61\times10^{-4}$ & PASS \\
+    A3 & 储电量越界数 & 等于 $0$（运行区间 $[1200,\,10800]$~kWh）
+       & 交：五个结果文件均为 $0$；内：问题 1--3 均为 $0$ & PASS \\
+    A4 & 充放电功率越界数 & 等于 $0$（单槽上限 $\overline P\Delta t=833.3333$~kWh）
+       & 交：块级上限 $4\overline P\Delta t=3333.3333$~kWh，四个横表均为 $0$；内：问题 1--3 的 10~min 级均为 $0$ & PASS \\
+    A5 & 充放互斥违反数 & 等于 $0$（$\eta_c\eta_d=0.81<1$ 时最优解不同时充放）
+       & 内：问题 1--3 均为 $0$，并在 97 个储电量双界均不活跃的槽位复核 & PASS \\
+    A6 & 周期与终端条件 & 问题 1 的 $\lvert S_0-S_{144}\rvert=0$；问题 2--4 每日 $S_{144}\ge S_0$
+       & 问题 1 的日周期偏差 $0.0$~kWh；四个横表「末值低于初值的天数」均为 $0$ & PASS \\
+    A7 & 非负性违反数 & 等于 $0$
+       & 交：负购电量 $0$ 个（四个横表各 $334\times144$ 个时段值，加 result1 的 144 个）；内：问题 1--3 均为 $0$ & PASS \\
+    A8 & 费用复算相对误差 & $\le10^{-4}$
+       & 交：问题 1 为 $0.0$；内：问题 1--3 均为 $0.0$ & PASS \\
+    A9 & 日期与结构 & 334 天；工作表名、列数与列序逐项一致
+       & 四个横表均为 $334\times147$，日期 2025-02-01 至 2025-12-31；result1 为 144 行计划表加 6 行充放电表；工作表名 result1 为计划购电量与充放电量，result2、result4-2 为计划购电量、充放电量、紧急购电量，result3、result4-3 为计划购电量、调整购电量、充放电量、紧急购电量 & PASS \\
+    A10 & 全天汇总列 & 购电量偏差 $\le10^{-2}$~kWh（144 槽取整上界 $7.2\times10^{-3}$）；费用相对偏差 $\le10^{-4}$
+       & 购电量最大偏差 $1.10\times10^{-3}$、$1.10\times10^{-3}$、$1.00\times10^{-3}$、$1.20\times10^{-3}$~kWh（对应问题 2、3、4-2、4-3）；费用最大相对偏差 $3.40\times10^{-7}$、$3.40\times10^{-7}$、$4.32\times10^{-7}$、$4.05\times10^{-7}$ & PASS \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\paragraph{反面证据：结算平衡不得漏掉紧急购电项}
+
+附件 5 把「计划购电量」与「紧急购电量」分成\textbf{两张表}，因此计划量不等于实际供给量。
+若 A1 的结算平衡漏掉紧急购电项 $g_t$（即把计划购电量当作全部供给），残差恰好等于 $g_t$：
+在问题 2 的 334 天逐槽解上 $\max_t g_t=326.18$~kWh，在问题 3 上为 $204.87$~kWh，
+分别比 $10^{-6}$~kWh 的容差大 $3.3\times10^{8}$ 倍与 $2.0\times10^{8}$ 倍；
+补上 $+g_t$ 后，问题 2、3 的平衡残差降为 $3.41\times10^{-13}$~kWh。
+同一次审计还给出：问题 2 的盈余处置量（弃光与超购部分的处置量）为 $3\,106\,390.84$~kWh，
+问题 3 为 $2\,638\,963.35$~kWh，均为正残差，与「供给不低于需求」的口径一致。
+
+\paragraph{审计结论}
+
+\begin{center}
+\fbox{\ 全部通过，可进入写作\ }\qquad
+\fbox{\ 存在失败项，已定位并修正\ }（未勾选）
+\end{center}
+
+\noindent A1--A10 十项全部通过；审计同时复核了交付物的结构与全天汇总列，
+未发现任何越界、违反非负性或费用复算不一致。
+
+\section{源程序清单}\label{sec:app-code}
+
+以下为本论文建模、求解、绘图、审计与数值汇总所用的\textbf{全部源程序}（格式规范第五条），
+与 \texttt{code/} 下的实际文件逐项一致；附录用 \texttt{lstinputlisting} 原样引入文件内容。
+\texttt{[plain]} 选项表示该脚本不参与求解，只做绘图或文本处理。
+
+\codefile{config.py}
+\codefile{lp_engine.py}
+\codefile{q1.py}
+\codefile{q2.py}
+\codefile{q3.py}
+\codefile{q4.py}
+\codefile{results_io.py}
+\codefile{exp_scan.py}
+\codefile{exp_sobol.py}
+\codefile{exp_na.py}
+\codefile{exp_benchmark.py}
+\codefile{audit.py}
+\codefile{paper_numbers.py}
+\codefile{run_all.py}
+\codefile{requirements.txt}
+\codefile[plain]{plot_figures.py}
+
+\begin{guideblock}
+附录放\textbf{可复制的纯文本源码}，\textbf{不要用截图}，也不要放空壳函数。
+每张数据图都要能追到生成脚本：图 3--图 10 由 \texttt{plot\_figures.py} 一次生成（每张图一个函数），
+图 1、图 2 为 \texttt{figures/} 下的 TikZ 源文件、由 XeLaTeX 直接排版。
+新增脚本必须同步补入本清单，否则「论文未列全部源程序」属格式规范第五条风险。
+\end{guideblock}
+
+\section{数据字典}
+
+\begin{table}[htbp]
+  \centering
+  \caption{附件字段、单位与时标约定}
+  \label{tab:datadict}
+  \footnotesize
+  \begin{tabularx}{\linewidth}{C{1.4cm} L{3.0cm} C{1.6cm} C{2.4cm} Y}
+    \toprule
+    附件 & 字段 & 单位 & 时间范围 & 时标约定 \\
+    \midrule
+    附件 1 & 电价 & 元/kWh & 一天（144 时段） & 标签 = 时段末端；$0{:}00{+}1$ 表示次日 $0{:}00$（当日 $24{:}00$） \\
+    附件 1 & 小区负载 & kW & 同上 & 同上，\textbf{实为附件 2 全年逐时段均值}（见下） \\
+    附件 1 & 光伏发电「预测」功率 & kW & 同上 & \textbf{实为附件 2 全年逐时段均值，不是预报}（见下） \\
+    附件 2 & 小区负载 & kW & 2025-01-01 至 12-31 & 365 行 $\times$ 144 列，标签 = 时段末端 \\
+    附件 2 & 光伏发电实际功率 & kW & 同上 & 同上 \\
+    附件 3 & 光伏发电预报 & kW & 同上 & 每天 $0/6/12/18$ 时发布，预报 $k$ 小时对应 $(h_0+k-1,\ h_0+k]$ \\
+    附件 4 & 电价 & 元/kWh & 同上 & 365 行 $\times$ 144 列，标签 = 时段末端 \\
+    附件 5 & 结果文件模板 & --- & 同上 & 工作表名、列名与列序即本文结果文件的格式约定 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\paragraph{附件 1 的身份核查（数据字典的关键一条）}
+
+附件 1 的\textbf{电价、小区负载、光伏发电「预测」功率三列，实为附件 2 与附件 4 的全年逐时段均值，
+并不是日前预报}：以 365 天逐时段均值逐槽比对，电价的最大偏差为 $5.15\times10^{-5}$~元/kWh
+（\texttt{intermediate/q4\_price.json} 的 \texttt{skeleton\_is\_mean} 字段），
+负载的最大偏差为 $1\times10^{-4}$~kW（\texttt{paper\_numbers.json}），光伏的最大偏差为 0.0431~kW。
+因此附件 1 \textbf{只能用于问题 1 与全文基线口径}：问题 1 的典型日与无储能基线 $C^{base}$ 用它，
+问题 2--4 的日前计划一律改用附件 3 的当次预报（问题 2 用 $0{:}00$ 预报，问题 3 在
+$0{:}00$、$6{:}00$、$12{:}00$、$18{:}00$ 四次更新），结算一律用附件 2 与附件 4 的实际值。
+若把附件 1 当作日前预报，计划就脱离了该时刻真正可得的信息，属信息结构的口径错误。
+另有一个窗口口径需同时说明：只用结果窗口 2025-02-01 至 12-31 的 334 天求均值时，
+电价的最大偏差约 $3.1\times10^{-2}$~元/kWh，即\textbf{窗口内均值并不完全等于附件 1}，
+故问题 2--4 也不能把附件 1 当作窗口内的均值曲线使用。
+
+\section{长推导}
+
+\subsection{对偶推导与阈值律}
+
+记式~\eqref{eq:q1-balance} 的乘子为 $\alpha_t$（电量平衡的影子价格，
+在正常购电时段等于电价，见式~\eqref{eq:app-alpha-eq-p}），式~\eqref{eq:q1-soc} 的乘子为
+$\nu_t$（储电量的边际价值，即水价值），储电量上下界乘子为 $\lambda^{\pm}_t\ge 0$，
+充放电功率界乘子为 $\varrho^{c}_t,\varrho^{d}_t\ge 0$。
+把电量平衡写成 $(L_t-PV_t)\Delta t+c_t+s_t-E_t-d_t=0$，拉格朗日函数为
+
+\begin{equation}
+  \begin{aligned}
+    \mathcal L=\ &\sum_{t}p_tE_t
+    +\sum_{t}\alpha_t\Bigl[(L_t-PV_t)\Delta t+c_t+s_t-E_t-d_t\Bigr]\\
+    &+\sum_{t}\nu_t\Bigl[S_t-S_{t-1}-\eta_cc_t+\frac{d_t}{\eta_d}\Bigr]
+    +\sum_{t}\lambda^{+}_t\bigl[S_t-\overline S\bigr]
+    +\sum_{t}\lambda^{-}_t\bigl[\underline S-S_t\bigr]\\
+    &+\sum_{t}\varrho^{c}_t\bigl[c_t-\overline P\Delta t\bigr]
+    +\sum_{t}\varrho^{d}_t\bigl[d_t-\overline P\Delta t\bigr]
+  \end{aligned}
+  \label{eq:app-lag}
+\end{equation}
+
+对各决策变量求平稳性条件（$E_t,s_t,c_t,d_t$ 对 $t=1,\dots,144$；$S_t$ 对 $t=1,\dots,143$，
+因为日周期约束把 $S_{144}=S_0=6000$~kWh 固定）：
+
+\begin{align}
+  \frac{\partial\mathcal L}{\partial E_t}&=p_t-\alpha_t\ \ge 0,
+  &E_t\bigl(p_t-\alpha_t\bigr)&=0 \label{eq:app-stat-E}\\
+  \frac{\partial\mathcal L}{\partial s_t}&=\alpha_t\ \ge 0,
+  &s_t\,\alpha_t&=0 \label{eq:app-stat-s}\\
+  \frac{\partial\mathcal L}{\partial c_t}&=\alpha_t-\eta_c\nu_t+\varrho^{c}_t\ \ge 0,
+  &c_t\bigl(\alpha_t-\eta_c\nu_t+\varrho^{c}_t\bigr)&=0 \label{eq:app-stat-c}\\
+  \frac{\partial\mathcal L}{\partial d_t}&=-\alpha_t+\frac{\nu_t}{\eta_d}+\varrho^{d}_t\ \ge 0,
+  &d_t\Bigl(-\alpha_t+\frac{\nu_t}{\eta_d}+\varrho^{d}_t\Bigr)&=0 \label{eq:app-stat-d}\\
+  \frac{\partial\mathcal L}{\partial S_t}&=\nu_t-\nu_{t+1}+\lambda^{+}_t-\lambda^{-}_t=0
+  \label{eq:app-stat-S}
+\end{align}
+
+由式~\eqref{eq:app-stat-E}，购电时段（$E_t>0$）恒有
+
+\begin{equation}
+  \alpha_t=p_t
+  \label{eq:app-alpha-eq-p}
+\end{equation}
+
+即电量平衡的影子价格等于该时段的电价；数值上逐槽复核的最大偏差为 $0.000$~元/kWh。
+若充放电功率界均不活跃（$\varrho^{c}_t=\varrho^{d}_t=0$），式~\eqref{eq:app-stat-c} 与
+式~\eqref{eq:app-stat-d} 化为
+
+\begin{equation}
+  \alpha_t-\eta_c\nu_t\ \ge 0,\qquad
+  \frac{\nu_t}{\eta_d}-\alpha_t\ \ge 0
+  \label{eq:app-threshold-raw}
+\end{equation}
+
+且 $c_t>0$ 时前式取等、$d_t>0$ 时后式取等，即得正文命题~\ref{prop:threshold} 的阈值律：
+\textbf{$\alpha_t\le\eta_c\nu_t$ 时充电、$\alpha_t\ge\nu_t/\eta_d$ 时放电}，
+死区为 $\eta_c\nu_t<\alpha_t<\nu_t/\eta_d$，死区比为 $1/(\eta_c\eta_d)=1.2346$
+（单边效率各 0.9、往返 0.81），与式~\eqref{eq:q1-deadband} 一致。
+由式~\eqref{eq:app-stat-S} 还可得水价值的跨期关系：在储电量上下界均不活跃的连续时段上
+$\nu_t=\nu_{t+1}$（水价值恒定）；储电量触及上界时 $\lambda^{+}_t>0$、$\nu_t<\nu_{t+1}$；
+触及下界时 $\lambda^{-}_t>0$、$\nu_t>\nu_{t+1}$。
+这一关系是图~\ref{fig:dualprice} 中水价值曲线出现折点的原因。
+
+数值复核（\texttt{intermediate/q1\_dual2.json}）：储电量双界均不活跃的槽位 97 个；
+$\nu_t\in[0.4711,\ 1.1305]$~元/kWh，$\alpha_t\in[0.3713,\ 1.2561]$~元/kWh；
+全部 144 槽的充放电阈值律违反次数为 $0$，互补松弛最大残差为 $0.000$~元/kWh，
+式~\eqref{eq:app-alpha-eq-p} 的最大偏差为 $0.000$~元/kWh。
+
+\subsection{报童临界分位数的推导}
+
+设时段 $t$ 的需求 $D_t$ 为随机变量、分布函数为 $F_t$，计划购电量为 $E_t$，
+过剩成本为 $c_o$（多买 1~kWh 的损失），缺货成本为 $c_u$（不足 1~kWh 的额外支出）。
+期望总成本为
+
+\begin{equation}
+  \Pi(E)=c_o\,\mathbb E\bigl[(E-D)^{+}\bigr]+c_u\,\mathbb E\bigl[(D-E)^{+}\bigr]
+  \label{eq:app-nv-cost}
+\end{equation}
+
+对 $E$ 求导并令其为零：
+
+\begin{equation}
+  \frac{\mathrm d\Pi}{\mathrm dE}
+  =c_oF(E)-c_u\bigl[1-F(E)\bigr]=0
+  \quad\Longrightarrow\quad
+  F(E^{*})=\frac{c_u}{c_u+c_o}
+  \label{eq:app-nv-foc}
+\end{equation}
+
+本题中不足 1~kWh 需按 $5p_t$ 紧急购电，而正常电价 $p_t$ 已随计划购电量支付，
+故缺货的额外支出为 $c_u=5p_t-p_t=4p_t$；超购的电量若无处可用（超购即弃置），
+则 $c_o=p_t$，代入式~\eqref{eq:app-nv-foc} 得
+
+\begin{equation}
+  F(E^{*})=\frac{4p_t}{4p_t+p_t}=\frac45=0.8
+  \qquad\Longrightarrow\qquad
+  \text{最优缺货概率}=1-F(E^{*})=\frac15=0.2
+  \label{eq:app-nv-result}
+\end{equation}
+
+即「留安全边际」的临界分位数为 $4/5$、最优缺货概率为 $1/5$。
+若超购电量能转入储能、留待后续更高价时段使用（单位回收价值 $r_t$），
+则 $c_o=p_t-r_t$，临界分位数相应上移：取全年均价 $p=0.7662$~元/kWh 与全年最低价
+$p^{low}=0.3713$~元/kWh，得 $c_o\approx0.395$~元/kWh，$F(E^{*})\approx0.886$，
+最优缺货概率降至约 $1/10$。此即正文式~\eqref{eq:q2-newsvendor} 与表~\ref{tab:newsvendor} 的来源。
+
+实测对照（\texttt{paper\_numbers.json} 的「报童经验」）：主口径下逐槽缺货频率为 $8.55\%$，
+缺口电量 $172\,015.82$~kWh，电量满足率 $99.04\%$，安全边际合计 $576\,299.67$~kWh
+（$11.98$~kWh/槽），落在 $1/10$ 与 $1/5$ 两界\textbf{之下侧}——
+因为储能同时承担了对冲功能，报童结论只作方向性近似与上下界使用，不作精确刻画。
+
+\section{随机种子清单}
+
+本工程\textbf{只在四处使用随机数}，四问的线性规划求解、主口径的场景削减、
+审计与数值汇总均为确定性过程（同一输入必得同一输出）。逐项清单如表~\ref{tab:seeds}。
+
+\begin{table}[htbp]
+  \centering
+  \caption{随机种子清单（代码中的全部随机源；其余过程确定）}
+  \label{tab:seeds}
+  \footnotesize
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabularx}{\linewidth}{L{3.0cm} L{3.2cm} C{2.5cm} Y}
+    \toprule
+    用途 & 随机机制 & 种子 & 说明 \\
+    \midrule
+    问题 4 联合情景合成（条件对照） & 分块 Bootstrap，按时刻对齐 6~h 块重采样
+      （\texttt{q4.build\_joint\_scenarios(mode="boot")}） & \texttt{numpy.random.default\_rng(seed=7)}
+      & 电价块与光伏预报残差块成对抽取，保住日内形状与相关性；一次生成后固定使用 \\
+    场景削减的对照路径 & $k$-means 初始化（\texttt{lp\_engine.reduce\_scenarios}）
+      & \texttt{random\_state=0}（\texttt{n\_init=4}）
+      & 仅在 \texttt{--scen kmeans} 对照下启用；\textbf{主口径不抽样}：按日总残差等频分层后在层内取 medoid，确定性 \\
+    非预期性置换检验 & 对某次预报做日间随机置换（\texttt{exp\_na.py}）
+      & \texttt{numpy.random.default\_rng(seed=0)}；对照用 \texttt{seed=1}
+      & 检验「置换 $6{:}00$ 预报后槽 0--35 完全不变、槽 36--71 改变」，用于排除信息泄漏 \\
+    全局灵敏度的采样 & Sobol 低差异序列置乱
+      （\texttt{scipy.stats.qmc.Sobol(scramble=True)}，\texttt{exp\_sobol.py}）
+      & 费用目标 \texttt{seed=42}；节省率目标 \texttt{seed=43}
+      & 置乱只改变采样点的取法，不改变参数区间与模型本身 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\noindent\textbf{确定性的部分（无随机数）}：问题 1--4 的全部线性规划由 SciPy
+\texttt{linprog(method="highs")} 精确求解；问题 2、3 的场景削减用「等频分层加层内 medoid」，
+问题 4 的历史代表日情景用「日净需求残差与日均电价」二维分层取 medoid、按层样本占比赋权，
+两者都是确定性算法；\texttt{audit.py}、\texttt{paper\_numbers.py} 与 \texttt{exp\_scan.py}
+不含随机数。因此论文的每一个数字在同一环境下重跑即可复现。
+
+\paragraph{诚实说明}：本工程\textbf{未开展「多种子重复生成情景」的稳健性实验}，
+故不报告费用的均值、标准差与 $95\%$ 置信区间，也不列出 20 个种子。
+本工程对这一缺口的处理是：把随机性限制在只影响未来情景、不影响已实现时段决策的合成与采样环节
+（分块 Bootstrap 只作为问题 4 联合情景的条件对照，主口径用确定性的分层 medoid），
+并以同源对照替代多种子重复——同一固定情景集下的信息结构对照（R1、R2、R3）、
+场景数对照（$K=60$ 与 $K=120$）、终端条件对照与安全边际消融，四者的结论方向一致。
+若需要多种子区间，只需改动 \texttt{build\_joint\_scenarios} 的 \texttt{seed} 参数并重跑
+\texttt{run\_all.py}，其余环节无需修改。
+
+\section{验证与灵敏度明细}
+
+本节汇集正文第九章与第三章各表的完整明细，便于复核；正文已给出各表的结论与判据。
+
+\begin{table}[htbp]
+  \centering
+  \caption{独立审计项、阈值与实测结果（内部解：问题 1、2、3 的 10~min 级解；
+           交付物：result1、result2、result3、result4-2、result4-3 共五个结果文件；
+           窗口 2025-02-01 至 2025-12-31，共 334 天）}
+  \label{tab:audit}
+  \scriptsize
+  \setlength{\tabcolsep}{3pt}
+  \begin{tabularx}{\linewidth}{C{0.65cm} L{3.30cm} L{3.15cm} L{3.15cm} Y}
+    \toprule
+    项 & 检查内容与阈值 & 内部解实测 & 交付物实测 & 判定 \\
+    \midrule
+    A1 & 功率/电量平衡残差（式~\eqref{eq:q1-balance}）：\(\max_t\lvert E_t+PV_t\Delta t+d_t+g_t-L_t\Delta t-c_t-s_t\Delta t\rvert\le10^{-6}\)~kWh
+       & 问题 1 \(1.49\times10^{-13}\)；问题 2、3 \(3.41\times10^{-13}\)~kWh
+       & 交付物无逐槽 \(L,PV\) 列，平衡只能在内部解上核验（汇总列对拍见 A10）
+       & PASS \\
+    A2 & 储电量递推（式~\eqref{eq:q1-soc}）：\(\max_t\lvert S_t-S_{t-1}-\eta_cc_t+d_t/\eta_d\rvert\le10^{-6}\)~kWh
+       & 问题 1 \(9.09\times10^{-13}\)；问题 2、3 \(1.09\times10^{-11}\)~kWh
+       & 问题 1 \(3.64\times10^{-12}\)；问题 2、3、4-2、4-3 为 \(2.96/2.72/2.11/2.61\times10^{-4}\)~kWh，为写入取整所致（见下注）
+       & PASS\textsuperscript{注} \\
+    A3 & 储电量边界：越界数 \(=0\)（区间 \([1200,10800]\)~kWh）
+       & 0 & 0 & PASS \\
+    A4 & 充放功率边界：问题 1--3 按单槽上限 \(833.3333\)~kWh；交付物按块级上限 \(24\overline P\Delta t=20\,000\)~kWh
+       & 0 & 0 & PASS \\
+    A5 & 充放互斥：\(\min(c_t,d_t)\le10^{-6}\)
+       & 违反槽数 0（充放同时槽数 0）
+       & 交付物只有 4~h 聚合量，块内可同时有充放电（问题 1 的 \(4{:}00\)--\(8{:}00\) 块即如此），故块级不可检验
+       & PASS \\
+    A6 & 周期/终端：问题 1 要求 \(S_0-S_{144}=0\)；问题 2--4 要求跨日衔接且 \(S_T\ge S_0\)
+       & 问题 1 周期偏差 \(0.000\)；问题 2、3 末值低于初值的天数为 0
+       & 五个结果文件末值低于初值的天数均为 0
+       & PASS \\
+    A7 & 非负性：所有电量与费用 \(\ge-10^{-6}\)
+       & 负购电槽数 0 & 负购电量数 0 & PASS \\
+    A8 & 费用复算：计划 \(+\) 紧急 \(+\) 调整相关，相对误差 \(\le10^{-4}\)
+       & 问题 1、2、3 的相对误差均为 0
+       & 结果文件无调整与紧急费用的分项列，交付物层只能核验计划购电费（最大相对偏差 \(4.32\times10^{-7}\)，问题 4-2）；四项费用的复算在内部解上完成（相对误差 0）
+       & PASS \\
+    A9 & 日期与结构：334 天、工作表名/列名/列序与模板一致
+       & 334 天 & 五个文件均为 334 行 \(\times\)147 列，日期范围 2025-02-01 至 2025-12-31，工作表名与模板逐项一致；紧急购电行数 1156/1190/1193/1187
+       & PASS \\
+    A10 & 全天汇总列与逐时段求和一致：相对误差 \(\le10^{-4}\)
+       & --- & 全天购电量最大偏差 \(0.0012\)~kWh（问题 4-3）；全天购电费最大相对偏差 \(4.32\times10^{-7}\)（问题 4-2）
+       & PASS \\
+    \bottomrule
+  \end{tabularx}
+  \normalsize
+  \par\vspace{1.2ex}
+  {\footnotesize\textsuperscript{注}\quad 交付物 A2 的 \(10^{-4}\)~kWh 量级残差可由写入精度完全解释：
+  \texttt{results\_io.py::soc\_sheet\_frame()} 对 6 个块级充放电量与 \(0{:}00\)/\(24{:}00\) 两个储电量
+  按 4 位小数写入，取整误差上界为 \(6\times5\times10^{-5}+2\times5\times10^{-5}=4\times10^{-4}\)~kWh，
+  与实测值一致；\texttt{result1.xlsx} 由 \texttt{q1.py::write\_result1()} 写入未取整的块级值，
+  故其同一残差为 \(3.64\times10^{-12}\)~kWh。该残差不是物理越界（A3、A4 越界数均为 0）。\par}
+\end{table}
+
+\begin{table}[htbp]
+  \centering
+  \caption{基线与消融对照矩阵（费用单位：元，电量单位：kWh；
+           全部为 2025-02-01 至 2025-12-31 共 334 天、附件 1 固定电价口径；
+           "相对 \(C^{base}\)"以无储能基线 \(16\,407\,319.63\)~元（\calref{C-01} 变体 V1）为分母；
+           "相对主模型"以问题 2 的两阶段主模型为基准）}
+  \label{tab:ablation}
+  \scriptsize
+  \setlength{\tabcolsep}{3pt}
+  \begin{tabularx}{\linewidth}{C{0.75cm} L{2.90cm} C{2.05cm} C{1.60cm} C{1.70cm} Y}
+    \toprule
+    编号 & 配置（新增或移除的模块） & 总费用 & 相对 \(C^{base}\) & 紧急购电量 & 结论 \\
+    \midrule
+    B0 & 无储能：净负荷全额购电（闭式 \calref{C-01}）
+       & 16\,407\,319.63 & 0 & --- & 基线 \\
+    R2 & 典型日预报：计划依据改为附件 1 的日均形状
+       & 23\,484\,646.63 & \(-43.14\%\) & 2\,525\,548.76 & 比无储能基线还贵 \(7\,077\,327.00\)~元，不可用 \\
+    E0 & 无安全边际：确定性等价（\(K=1\)、零残差情景）
+       & 17\,398\,559.68 & \(-6.04\%\) & 1\,156\,618.02 & 移除安全边际后反而高于无储能基线，
+       \textbf{安全边际的边际价值 \(3\,133\,767.54\)~元} \\
+    R1 & 完美信息：\(0{:}00\) 知当日真值
+       & 13\,411\,560.90 & 18.26\% & 0.00 & 预测误差成本 \(853\,231.24\)~元（下界） \\
+    M & 主模型：\(0{:}00\) 一次预报 \(+\) 两阶段随机规划（\(K=60\)）
+       & \textbf{14\,264\,792.13} & 13.06\% & 172\,015.82 & 主方案（基准行） \\
+    N2 & 两次预报：\(0{:}00+12{:}00\)
+       & 14\,131\,564.16 & 13.87\% & 122\,524.83 & 比主模型省 \(133\,227.98\)~元 \\
+    N4 & 四次滚动：\(0/6/12/18\) \(+\) 非预期性
+       & 13\,932\,402.95 & 15.08\% & 64\,522.09 & 比主模型省 \(332\,389.18\)~元（\evid{C-Q3-01}） \\
+    PI & 完全信息上界：四个时刻均知真值
+       & 13\,874\,340.39 & 15.44\% & 6\,134.76 & 可获得信息价值的上界；四次预报已实现 \(85.13\%\) \\
+    FY & 全年单一 LP：完美信息、单一储电量轨迹、无日决策解耦（192\,384 个变量）
+       & 12\,228\,166.56 & 25.47\% & --- & 全局下界；\textbf{日决策解耦代价 \(1\,183\,394.34\)~元（\(9.68\%\)）} \\
+    K120 & 场景数加倍（\(K=120\)，其余同主模型）
+       & 14\,235\,163.95 & 13.24\% & 141\,707.94 & 费用仅降 \(29\,628.19\)~元（\(-0.21\%\)），结论稳健 \\
+    \bottomrule
+  \end{tabularx}
+  \normalsize
+\end{table}
+
+\begin{table}[htbp]
+  \centering
+  \caption{单参数灵敏度与 Sobol 全局灵敏度（参数扰动档位、关键指标实测与"结论是否改变"的判断；
+           单参数扫描除终端条件外均在同一组典型日参数下求解，Sobol 指数 \(N=256\)、
+           输出量已逐行注明；费用单位：元，电量单位：kWh）}
+  \label{tab:sens}
+  \scriptsize
+  \setlength{\tabcolsep}{3pt}
+  \begin{tabularx}{\linewidth}{L{1.85cm} L{2.55cm} L{4.35cm} C{1.30cm} Y}
+    \toprule
+    参数 & 扰动档位 & 关键指标实测 & Sobol \(S_1\) & 结论是否改变 \\
+    \midrule
+    紧急购电倍数 \(\kappa\)
+      & 2、3、5（基准）、8、10
+      & 典型日安全边际 \(671.42/1\,416.50/2\,232.49/3\,027.42/3\,334.50\)~kWh；期望紧急购电 \(1\,246.33/779.87/428.32/242.87/187.27\)~kWh；典型日总费用 \(39\,224.54/39\,941.12/40\,747.45/41\,437.52/41\,758.99\)~元
+      & ---
+      & 方向不变：\(\kappa\) 越大安全边际越大、缺口越小。反转点在 \(\kappa\to1\)：紧急购电与正常电价同价时缺货成本消失、临界分位数退化，"需要安全边际"的结论不再成立 \\
+    效率口径 \(\eta_c,\eta_d\)
+      & 单边各 0.9（往返 0.81，\textbf{主口径}）、往返 0.9 等效单边、仅充电侧 0.9、仅放电侧 0.9
+      & 典型日总费用 \(35\,126.95/33\,801.06/33\,416.53/34\,168.61\)~元；节省 \(12\,925.10/14\,250.99/14\,635.52/13\,883.44\)~元，\textbf{极差 \(13.23\%\)}
+      & 0.0695（对全天购电费）
+      & 区间内结论不变（四种读法下储能均有利可图），但节省幅度必须带效率口径，否则同一模型可报出相差 \(13.23\%\) 的数 \\
+    储电量运行区间 \([\underline S,\overline S]\)
+      & 保持 10\%--90\% DOD：容量 7\,200、9\,600、12\,000（基准）、14\,400、19\,200、28\,800、48\,000~kWh
+      & 典型日总费用 \(38\,640.45/36\,700.45/35\,126.95/33\,875.57/31\,692.43/28\,854.53/27\,601.80\)~元；相对无储能基线的节省率由 \(19.59\%\) 单调升到 \(42.56\%\)
+      & 上限 0.2510、下限 0.1099（对全天购电费）
+      & 区间内结论不变：容量摆幅始终是主要瓶颈，仅解除容量上限可再省 \(22.14\%\) \\
+    充放功率上限 \(\overline P\)
+      & 1\,250、2\,500、5\,000（基准）、7\,500、10\,000~kW
+      & 典型日总费用 \(40\,166.17/36\,390.84/35\,126.95/35\,027.13/34\,960.59\)~元；节省率 \(16.41\%/24.27\%/26.90\%/27.11\%/27.24\%\)
+      & 0.0263（对全天购电费）
+      & 区间内结论不变：功率在 \(5000\)~kW 以上边际很小（\(0.28\%\)、\(0.47\%\)），但收紧到 \(2\,500\)~kW 时节省率由 \(26.90\%\) 降到 \(24.27\%\)、\(1\,250\)~kW 时降到 \(16.41\%\) \\
+    终端条件（\calref{C-08}）
+      & 窗口：\(S_T\ge S_0\)（ge，主口径）／日环状（eq）／自由终端（free）；典型日：日周期／自由环状
+      & 问题 2 完美信息档 \(13\,411\,560.90\)（ge 与 eq 同值）／\(13\,427\,548.51\)（free，\(+0.12\%\)）；
+        主模型档 \(14\,264\,792.13\)（ge）／\(14\,276\,816.39\)（free，\(+0.08\%\)）；
+        典型日 \(35\,126.9486\)（日周期）／\(35\,118.5986\)（自由环状，\(-8.35\)~元，\(-0.02\%\)）
+      & ---
+      & 三组差异均不超过 \(0.12\%\)，结论不变；窗口口径下自由终端反而略贵，
+        说明终端约束并非靠"掏空"储能省钱，故主口径取 \(S_T\ge S_0\)（数据见 \texttt{intermediate/q2\_term\_*.json}） \\
+    场景数 \(K\)
+      & 60（主口径）、120
+      & 总费用 \(14\,264\,792.13/14\,235\,163.95\)~元（\(-0.21\%\)）；紧急购电量 \(172\,015.82/141\,707.94\)~kWh（\(-17.62\%\)）；有紧急购电天数 \(296/277\)
+      & ---
+      & 费用结论不变；分项指标（紧急购电量、触发天数）对场景分辨率敏感，引用时须带 \(K\) \\
+    \bottomrule
+  \end{tabularx}
+  \normalsize
+\end{table}
+
+\begin{table}[htbp]
+  \centering
+  \caption{光伏预报偏差的逐整点结构（样本为 2025 年每天 \(0{:}00\) 发布的 24~h 预报与
+           附件 2 对应实际功率的逐槽配对，\(n=52\,560\)；bias 单位 kW，
+           “极值整点”给出该组内绝对偏差最大的整点及其取值）}
+  \label{tab:biasprofile}
+  \footnotesize
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabular}{lccc}
+    \toprule
+    整点分组 & 整点范围 & 组内 bias 区间 & 极值整点 \\
+    \midrule
+    夜间（光伏无有效出力） & \(0\)--\(4\) 时 & \(0.00\) 至 \(+0.09\) & \(4\) 时 \(+0.09\) \\
+    上午（系统性\textbf{高估}） & \(5\)--\(10\) 时 & \(+214.21\) 至 \(+733.00\) & \(7\) 时 \(+733.00\) \\
+    正午过渡 & \(11\) 时 & \(+7.21\) & --- \\
+    下午（系统性\textbf{低估}） & \(12\)--\(18\) 时 & \(-801.87\) 至 \(-106.46\) & \(15\) 时 \(-801.87\) \\
+    傍晚之后（预报空洞） & \(19\)--\(23\) 时 & \(-0.15\) 至 \(0.00\) & \(19\) 时 \(-0.15\) \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+  \centering
+  \caption{联合情景的保真度检验（对象：64 个代表历史日与 64 个分块 Bootstrap 情景；
+           参照：2025-02-01 至 12-31 的 334 天实际数据；单位：相对偏差为 \%，相关系数为无量纲量；
+           样本：64 情景 \(\times\) 144 槽）}
+  \label{tab:q4-scenfid}
+  \footnotesize
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabularx}{\linewidth}{L{4.4cm} C{2.6cm} C{2.6cm} Y}
+    \toprule
+    检验指标 & 代表历史日（主口径） & 分块 Bootstrap（对照） & 判读 \\
+    \midrule
+    电价均值相对偏差 & 0.08\% & 3.41\% & 主口径的均值几乎无偏 \\
+    最大分位相对差（1\%/5\%/25\%/50\%/75\%/95\%/99\%） & 6.99\%（1\% 分位） & 20.4\%（1\% 分位） & 两者都在低价尾部误差最大，对照口径的尾部偏差约为主口径的 3 倍 \\
+    情景 \(\rho(p,\text{净负荷})\) & 0.2597（实际 0.2620） & 无法按日配对 & 主口径 \textbf{保留}了联合结构 \\
+    日净需求残差均值保持 & \(-715.85\)~\unit{kWh}（全样本 \(-712.23\)，相对差 \(-0.51\%\)） & 不适用（块级拼装，无法按日配对） & 净需求侧的边缘分布同样保真 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\begin{table}[htbp]
+  \centering
+  \caption{储能容量与充放功率上限的双向扫描（问题 1，典型日；费用单位：\unit{元}）}
+  \label{tab:q1-scan}
+  \footnotesize
+  \begin{tabular}{rrr|rrr}
+    \toprule
+    容量（\unit{kWh}） & 最优购电费 & 相对主口径 & 充放功率上限（\unit{kW}） & 最优购电费 & 相对主口径 \\
+    \midrule
+    7\,200  & 38\,640.45 & \(-10.00\%\) & 1\,250  & 40\,166.17 & \(-14.35\%\) \\
+    9\,600  & 36\,700.45 & \(-4.48\%\)  & 2\,500  & 36\,390.84 & \(-3.60\%\) \\
+    12\,000 & 35\,126.95 & \(0.00\%\)   & 5\,000  & 35\,126.95 & \(0.00\%\) \\
+    14\,400 & 33\,875.57 & \(+3.56\%\)  & 7\,500  & 35\,027.13 & \(+0.28\%\) \\
+    19\,200 & 31\,692.43 & \(+9.78\%\)  & 10\,000 & 34\,960.59 & \(+0.47\%\) \\
+    28\,800 & 28\,854.53 & \(+17.86\%\) & ---     & ---        & --- \\
+    48\,000 & 27\,601.80 & \(+21.42\%\) & ---     & ---        & --- \\
+    \bottomrule
+  \end{tabular}
+  \\[1ex]
+  {\footnotesize 表注："相对主口径"以主口径最优费用 35\,126.95~\unit{元}（容量 12\,000~\unit{kWh}、
+  功率 5000~\unit{kW}）为分母，正号表示更省；容量扫描同步移动储电量上下限以保持 10\%--90\% 放电深度。
+  另做两个单自由度放开实验：仅解除储电量上限（充放功率维持 5000~\unit{kW}）为 27\,351.55~\unit{元}，
+  相对主口径多省 \(22.1\%\)；仅解除充放功率上限（容量维持 12\,000~\unit{kWh}）为 34\,544.43~\unit{元}，
+  相对主口径多省 \(1.7\%\)。}
+
+\end{table}
+
+\section{场景保真度与电价检验明细}
+
+本节给出正文第五章场景集与第七章电价过程检验、CVaR 风险—费用前沿的完整明细表。
+
+\begin{table}[htbp]
+  \centering
+  \caption{场景集的三层构造与稳健性检验（残差样本：2025-02-01 至 2025-12-31，334 天 \(\times\) 144 槽）}
+  \label{tab:scenfid}
+  \footnotesize
+  \begin{tabularx}{\linewidth}{C{1.2cm} L{2.6cm} L{5.0cm} Y}
+    \toprule
+    层次 & 保留的结构 & 本文做法 & 证据 \\
+    \midrule
+    第 1 层 & 残差水平分布（含尾部）
+      & 按日总残差 \(s_d=\sum_t r_{d,t}\) 等频分层，主口径 \(K=60\) 层
+      & 每层均有代表，尾部区间不被均值化抹平 \\
+        第 2 层 & 残差的日内形状与时段相关
+      & 层内取 medoid（真实历史日向量），不给中心化或平滑
+      & 代表场景逐槽可复现，形状与真实日一致 \\
+        第 3 层 & 层间概率权重
+      & \(W_\omega=n_\omega/334\)，\(\sum_\omega W_\omega=1\)
+      & 场景集一次性存盘固定，问题 3/4 与消融共用同一份 \\
+        稳健性 & 层数 \(K\) 的影响
+      & \(K=40/60/120\) 各求解一次全窗口
+      & 紧急购电量 238\,484 / 172\,015.82 / 141\,707.94~\unit{kWh}；
+        总费用 1\,437.17 / 1\,426.48 / 1\,423.52 万元，极差 13.65 万元（\(0.96\%\)） \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\begin{table}[htbp]
+  \centering
+  \caption{电价过程的四项统计检验（数据：附件 4 实时电价，2025-01-01 至 12-31，\(n=52\,560\)；
+           电价与残差单位：元/kWh，自相关为无量纲量；偏差检验的参照剖面为附件 1 电价列）}
+  \label{tab:price-test}
+  \footnotesize
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabularx}{\linewidth}{C{1.0cm} L{2.7cm} L{3.6cm} L{4.2cm} Y}
+    \toprule
+    编号 & 检验对象 & 检验方法与统计量 & 结果 & 对建模的含义 \\
+    \midrule
+    T1 & 确定性日内骨架是否存在
+       & 逐时段均值与逐时段标准差的对比（变异系数）
+       & 附件 1 剖面与附件 4 逐时段均值的最大偏差 \(5.15\times10^{-5}\)~元/kWh（全年 365 天口径；
+         仅结果窗口 334 天口径为 \(3.07\times10^{-2}\)）；残差逐时段标准差均值 0.1238~元/kWh，变异系数 16.94\%
+       & 骨架稳定存在但残差不可忽略，采用"骨架 + 残差"两层结构 \\
+        T2 & 残差的正态性与日间差异
+       & Jarque--Bera 检验、偏度与峰度；同一槽位跨日自相关
+       & \(\mathrm{JB}=656.70\)（\(p=2.51\times10^{-143}\)）拒绝正态；
+        偏度 \(-0.169\)、峰度 \(-0.431\)；日间自相关 \(\mathrm{ACF}(1\text{--}3)=0.513/0.148/0.144\)
+       & 残差非正态、日间相关性弱：不做正态参数化，改用非参数分层重采样；骨架不按月分段 \\
+        T3 & 日内自相关与波动结构
+       & 残差自相关 \(\mathrm{ACF}(1\text{--}6)\)；峰段与谷段残差标准差之比
+       & \(\mathrm{ACF}(1\text{--}6)=0.859/0.666/0.614/0.573/0.494/0.432\)；
+        峰段（19:00--20:00）残差标准差 0.1634~元/kWh 为谷段（03:00--04:00）0.0580~元/kWh 的 \textbf{2.81 倍}
+       & 不能按独立同分布抽样：情景须按时刻对齐分块，同时保留日内相关与按时段异方差 \\
+        T4 & 与负载、光伏的相关性
+       & Pearson 相关系数（池化与日聚合两个尺度）
+       & 池化：与负载 \(+0.508\)、与净负荷 \(+0.260\)、与光伏 \(+0.028\)；
+        日聚合：与负载 \(+0.898\)、与光伏 \(-0.343\)
+       & \textbf{决定必须生成电价与净需求的联合情景}，否则系统性低估"高价时段同时缺电"的尾部风险 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\begin{table}[htbp]
+  \centering
+  \caption{风险前沿三个代表点的情景内指标与真实轨迹回测
+           （对象：联合情景集上按 \(\lambda\) 求解的三组解；范围：2025-02-01 至 12-31 中每 6 天取 1 天的 56 个代表日；
+            单位：费用 元/日、电量 kWh/日；样本：64 个代表情景，\(\alpha=0.95\)）}
+  \label{tab:frontier-backtest}
+  \footnotesize
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabularx}{\linewidth}{L{3.0cm} C{2.3cm} C{2.3cm} C{2.5cm} Y}
+    \toprule
+    代表点 & 情景内期望费用 & 情景内 95\% CVaR & 真实轨迹回测费用 & 紧急购电量 \\
+    \midrule
+    \(\lambda=0\)（期望最优） & 41\,995.59 & 52\,176.36 & 45\,694.27 & 480.19 \\
+    \(\lambda=0.3\)（推荐） & 42\,168.43 & 50\,814.83 & 45\,778.03 & 324.60 \\
+    \(\lambda=1\)（近似最坏） & 42\,411.56 & 50\,510.46 & 45\,952.85 & 313.83 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\section{验证映射、风险结果与局限明细}
+
+本节给出正文第九章验证层级映射、第八章问题 4 逐日期结果与第十章局限清单的完整表格。
+
+\begin{table}[htbp]
+  \centering
+  \caption{验证链条 L1--L5 的实施方式、通过标准与本文实测结果
+           （全部检验针对 2025-02-01 至 2025-12-31 共 334 天的结果窗口，问题 1 另含典型日）}
+  \label{tab:L1L5}
+  \footnotesize
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabularx}{\linewidth}{C{0.75cm} L{1.95cm} L{3.60cm} L{2.55cm} Y}
+    \toprule
+    级 & 名称 & 做法 & 通过标准 & 本文实测结果 \\
+    \midrule
+    L1 & 退化与恒等式单测
+      & 无储能退化由闭式给出并与模型基线对拍；充放比与 \(1/(\eta_c\eta_d)\) 对拍；周期条件、充放互斥、非负性逐槽断言
+      & 相对误差 \(\le10^{-6}\)；越界数 \(=0\)
+      & 充放比偏差 \(4.44\times10^{-16}\)；周期偏差 \(0.000\)；充放同时槽数 0；负购电槽数 0；无储能基线闭式 \(48\,052.05\)~元与模型基线一致 \\
+    L2 & 交叉模型对拍
+      & 逐日两阶段求解（334 个子问题、固定初态）与全年单一 LP（192\,384 个变量、96\,192 条约束）在完美信息下对拍
+      & 差距可解释、方向合理
+      & 全年单一 LP \(12\,228\,166.56\)~元，逐日完美信息 \(13\,411\,560.90\)~元，差 \(1\,183\,394.34\)~元（\(9.68\%\)），差值来自日决策解耦与逐日终端条件，方向为保守 \\
+    L3 & 真实数据独立审计
+      & \textbf{不共用建模代码的费用函数}，只读原始附件与结果文件重算 10 项
+      & 见表~\ref{tab:audit}
+      & A1--A10 逐项结果见表~\ref{tab:audit}：内部解全部通过，交付物层 A2 需按写入精度说明 \\
+    L4 & 基线与消融
+      & 无储能基线、典型日预报、完美信息、安全边际、场景数、终端条件、日决策解耦共 10 组对照
+      & 每个保留模块的移除都伴随可分辨的费用上升
+      & 见表~\ref{tab:ablation}：安全边际的边际价值 \(3\,133\,767.54\)~元，四次滚动的价值 \(332\,389.18\)~元 \\
+    L5 & 统计与稳健性
+      & 场景保真度、场景数稳健性（\(K=60/120\)）、单参数与 Sobol 全局灵敏度、非预期性置换检验
+      & 结论方向不变、关键量给区间
+      & 场景均值相对差 \(0.082\%\)、关键分位最大相对差 \(6.99\%\)、电价—净需求相关 0.2597 对 0.2620；\(K\) 由 60 加倍到 120 时费用仅变 \(-0.21\%\)；结论方向均不变（单参数与 Sobol 结果见表~\ref{tab:sens}） \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\begin{table}[htbp]
+  \centering
+  \caption{模型局限的四要素表述（假设编号 \(\rightarrow\) 可能偏离现实之处 \(\rightarrow\) 偏离方向
+           \(\rightarrow\) 验证所需数据 \(\rightarrow\) 部署前校准动作）}
+  \label{tab:limitation}
+  \scriptsize
+  \setlength{\tabcolsep}{3pt}
+  \begin{tabularx}{\linewidth}{C{1.05cm} L{3.30cm} C{1.35cm} L{3.10cm} Y}
+    \toprule
+    假设编号 & 可能偏离现实之处 & 偏离方向 & 验证所需数据 & 部署前校准动作 \\
+    \midrule
+    A2 & 充放电效率取单边 \(0.9\)（往返 \(0.81\)），实际随功率、温度与老化变化
+       & 高估收益
+       & 电池厂商的效率—功率—温度曲线与运行日志
+       & 按效率灵敏度重标定：本文四种口径下典型日节省为 \(12\,925.10\)--\(14\,635.52\)~元（极差 \(13.23\%\)），
+         若往返效率低于 \(0.7\)，套利收益须整体下调 \\
+    A4 & 忽略自放电与循环衰减
+       & 高估长期收益
+       & 循环寿命试验数据、衰减—循环次数曲线
+       & 在目标函数中加入循环成本 \(c_{cyc}\times\)放电量后重解；在此之前本文的节省率应视为上限 \\
+    A1 & 不允许向外部电网售电
+       & 高估费用，结果保守
+       & 上网电价政策与结算规则、余电上网的合同条款
+       & 引入上网电价 \(\theta_t\) 后重解并比较策略变化；此时盈余处置量 \calref{C-06} 的地位由"必要"变为"可选" \\
+    R3 & 计划依据中把当日负载视为已知（题面未给负载预报）
+       & 低估紧急购电量与总费用
+       & 负载预测误差序列（相对 MAE \(5\%\)、\(10\%\)）
+       & 按负载水平的全局灵敏度（Sobol 一阶指数 \(0.4711\)）重新设置安全边际，
+         并对 \(5\%\)、\(10\%\) 两档负载误差重跑问题 2、3 \\
+    A8 & 结果窗口首日 \(0{:}00\) 的储电量由 2025 年 1 月预热递推得到
+       & 影响初期费用，方向不定
+       & 实际运行日志中 2025-02-01 \(0{:}00\) 的储电量
+       & 以实测初值替换后重跑窗口前两周，比较初始瞬态长度与费用差 \\
+    A6 & 终端条件只要求 \(S_T\ge S_0\)，未给终端储电量定价
+       & 高估末期费用，结果保守
+       & 跨日电价信息与结算规则
+       & 用终端水价值替代硬边界后重解，比较末两周的费用差（本文日周期与自由环状两口径仅差 \(8.35\)~元） \\
+    场景集 & 334 天窗口既用于估计情景分布又用于回放（样本内）
+       & 高估稳健性，区间偏窄
+       & 不少于 2 年的预报误差历史
+       & 按拟合窗／验证窗切分重估情景集并做样本外回放（第九章已声明该限制与代偿性证据） \\
+    \bottomrule
+  \end{tabularx}
+  \normalsize
+\end{table}
+
+\section{附件结构与问题 4 逐日期结果明细}
+
+本节给出四个附件的字段结构与问题 4 在四个指定日期的逐项结果。
+
+\begin{table}[htbp]
+  \centering
+  \caption{附件数据规模、结构与本文用途（行数为数据行数，不含表头；单位：功率 kW、电价 元/kWh）}
+  \label{tab:data}
+  \footnotesize
+  \begin{tabularx}{\linewidth}{C{1.5cm} L{3.4cm} C{2.5cm} L{2.6cm} Y}
+    \toprule
+    附件 & 内容 & 数据规模 & 时间范围 & 本文用途 \\
+    \midrule
+    附件 1 & 电价、小区负载、光伏发电“预测”功率 & 144 行（时间列 \(+\) 3 个数据列） & 一天（全年平均日）
+      & 问题 1 的输入与基线口径；经身份核查后确认为全年平均日，不作日前预报（§3.3） \\
+        附件 2 & 小区负载、光伏发电实际功率（两个工作表） & 365 行 \(\times\) 144 列（另含日期列）
+      & 2025-01-01 至 12-31 & 问题 2--4 的实际值，用于实时结算与回测 \\
+        附件 3 & 光伏发电功率预报（整点值，每天 4 次发布） & 1460 行 \(\times\) 24 列（另含日期、发布时刻列）
+      & 2025-01-01 至 12-31 & 问题 2--4 的日前与滚动预报输入 \\
+        附件 4 & 实时电价 & 365 行 \(\times\) 144 列（另含日期列） & 2025-01-01 至 12-31
+      & 问题 4 的波动电价输入；其逐时段均值同时构成假设 A10 的“分时骨架” \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+【问题 4 逐日期结果】
+
+\begin{table}[htbp]
+  \centering
+  \caption{波动电价与固定电价下的结果对照（同一实际轨迹：2025-02-01 至 12-31 共 334 天；
+           单位：费用 元，电量 kWh；波动价基线 \(17\,026\,782.86\)~元，
+           固定价基线 \(16\,407\,319.63\)~元，均为 \calref{C-01} 口径）}
+  \label{tab:q4-summary}
+  \footnotesize
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabularx}{\linewidth}{L{3.4cm} C{2.5cm} C{2.5cm} C{2.3cm} Y}
+    \toprule
+    模型 & 总费用/\unit{元} & 相对基线节省率 & 紧急购电量/\unit{kWh} & 与固定价同结构的差 \\
+    \midrule
+    问题 2（固定价，两阶段） & 14\,264\,792.13 & 13.06\% & 172\,015.82 & --- \\
+    问题 4-2（波动价，两阶段） & 15\,094\,255.84 & 11.35\% & 182\,759.86 & \(+829\,463.70\)（\(+5.81\%\)） \\
+    问题 3（固定价，四次滚动） & 13\,932\,402.95 & 15.08\% & 64\,522.09 & --- \\
+    问题 4-3（波动价，四次滚动） & 14\,722\,153.17 & 13.54\% & 63\,523.11 & \(+789\,750.22\)（\(+5.67\%\)） \\
+    \bottomrule
+  \end{tabularx}
+\end{table}

@@ -1,0 +1,85 @@
+%!TEX root = ../main.tex
+% =============================================================================
+%  图 1  决策时序图（正文 §1.2）
+%  规格（四项必须标注，缺一不可）：
+%    ① "计划依据"与"结算依据"是两套数据，用不同线型区分
+%    ② 18:00 的预报覆盖到次日 18:00，用一条跨越 24:00 的箭头表示
+%    ③ 紧急购电发生在实时（结算时），不在决策时刻
+%    ④ 四问在图上的差别：Q1 仅 0:00 一个决策点且无惩罚；Q2 有 0:00 + 实时惩罚；
+%       Q3 有 4 个决策点；Q4 旁注"电价亦为随机"
+% =============================================================================
+\begin{tikzpicture}[
+  x=0.46cm, y=1cm, font=\small, >=Stealth,
+  ev/.style={font=\scriptsize, inner sep=1.5pt},
+]
+
+% ---------- 泳道底色 ----------
+\fill[gray!8, rounded corners=2pt] (-3.15,-2.15) rectangle (26.2,-0.30);   % 信息
+\fill[blue!5, rounded corners=2pt] (-3.15,-3.70) rectangle (26.2,-2.30);   % 决策
+\fill[red!4,  rounded corners=2pt] (-3.15,-5.25) rectangle (26.2,-3.85);   % 结算
+
+% ---------- 泳道标签 ----------
+\node[rotate=90, font=\footnotesize\heiti, gray!60!black] at (-2.55,-1.22) {信息};
+\node[rotate=90, font=\footnotesize\heiti, gray!60!black] at (-2.55,-3.00) {决策};
+\node[rotate=90, font=\footnotesize\heiti, gray!60!black] at (-2.55,-4.55) {结算};
+
+% ---------- 时间刻度（横轴 0:00 -> 24:00） ----------
+\foreach \h in {0,6,12,18,24}{
+  \draw[gray!25] (\h,-5.25) -- (\h,-0.30);
+}
+\foreach \h/\lab in {0/0:00, 6/6:00, 12/12:00, 18/18:00, 24/24:00}{
+  \draw[gray!60] (\h,0.00) -- (\h,-0.16);
+  \node[above, font=\scriptsize, gray!70!black] at (\h,0.00) {\lab};
+}
+\draw[gray!60, ->] (-0.9,0.00) -- (26.2,0.00) node[right, font=\scriptsize, gray!70!black] {时刻};
+\draw[gray!45, dashed] (24,0.00) -- (24,-5.25);
+\node[font=\scriptsize, gray!70!black, align=center] at (25.45,-5.55) {次日};
+
+% ---------- 泳道 1：信息（附件 3 的四个预报发布时刻） ----------
+% 预报覆盖区间的起点用实心圆标注
+\foreach \h/\y/\len/\txt in {%
+  0/-0.62/24/{\,覆盖至 24:00},
+  6/-0.95/18/{\,覆盖至 24:00},
+  12/-1.28/12/{\,覆盖至 24:00},
+  18/-1.61/8/{~覆盖至次日 18:00（跨日）}}{
+  \fill[blue!55!black] (\h,\y) circle (1.5pt);
+  \draw[gray!60, line width=0.5pt, -{Stealth[length=4pt]}] (\h,\y) -- (\h+\len,\y);
+  \node[ev, anchor=west, gray!25!black] at (\h+0.35,\y) {\h:00 发布\txt};
+}
+
+% ---------- 泳道 2：决策 ----------
+% Q1：唯一决策时刻 0:00
+\fill[blue!65!black] (0,-2.62) circle (2.4pt);
+\node[font=\scriptsize, anchor=west, blue!50!black] at (0.35,-2.62)
+  {计划购电：Q1\,/\,Q2\,/\,Q3\,/\,Q4（唯一决策时刻，随后不再修正）};
+% Q3/Q4：6:00、12:00、18:00 调整
+\foreach \h in {6,12,18}{
+  \draw[blue!65!black, fill=white, line width=0.7pt] (\h,-3.28) circle (2.4pt);
+}
+\draw[gray!55, dotted, line width=0.6pt] (0,-2.62) -- (0,-3.28);
+\node[font=\scriptsize, anchor=west, blue!50!black] at (6.35,-3.28)
+  {调整购电：Q3\,/\,Q4 在 6:00、12:00、18:00 各修正一次};
+
+% ---------- 泳道 3：结算 ----------
+\draw[gray!55, densely dashed, line width=0.7pt, -{Stealth[length=5pt]}]
+  (0,-4.20) -- (24,-4.20);
+\node[font=\scriptsize, anchor=west, gray!25!black] at (0.35,-3.98)
+  {结算依据：附件 2 实际负载与实际光伏功率（\textbf{与计划依据是两套数据}）};
+% 紧急购电：发生在实时（结算时），不在决策时刻
+\foreach \x in {9.4, 15.1, 21.3}{
+  \draw[red!75!black, line width=0.9pt] (\x-0.28,-4.52) -- (\x+0.28,-4.52) -- (\x,-4.78) -- cycle;
+}
+\node[font=\scriptsize, anchor=west, red!65!black] at (-3.05,-4.98)
+  {缺口 $\rightarrow$ 紧急购电（按 $5p_t$ 结算），发生在\textbf{实时}，不在任何决策时刻};
+
+% ---------- 图例 ----------
+\node[ev, anchor=west] at (-3.05,-5.62) {%
+  \tikz\draw[gray!60,line width=0.5pt,-{Stealth[length=4pt]}] (0,0)--(0.55,0);
+  ~预报（计划依据）\quad
+  \tikz\draw[gray!55,densely dashed,line width=0.7pt,-{Stealth[length=4pt]}] (0,0)--(0.55,0);
+  ~实际值（结算依据）\quad
+  \tikz\fill[blue!65!black] (0,0) circle (2.2pt);~决策时刻\quad
+  \tikz\draw[red!75!black,line width=0.9pt] (0,-0.05)--(0.28,-0.05)--(0.14,-0.26)--cycle;
+  ~紧急购电（非决策时刻）\quad
+  注：Q4 中电价亦为随机（旁注）};
+\end{tikzpicture}

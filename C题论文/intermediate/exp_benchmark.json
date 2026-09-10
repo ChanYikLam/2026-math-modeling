@@ -1,0 +1,27 @@
+{
+ "full_year": {
+  "cost": 12228166.56287453,
+  "n_var": 192384,
+  "n_slot": 48096,
+  "seconds": 4.3956139087677,
+  "success": true,
+  "base_cost": 16407319.631981425
+ },
+ "decoupling_gap_vs_R1": null,
+ "daily_decoupled_R1": {
+  "K": 60,
+  "term": "ge",
+  "info": "R1",
+  "tag": "cmp_R1",
+  "scen": "strat",
+  "n_days": 334,
+  "tot_plan": 13411560.896703022,
+  "tot_emg": 0.0,
+  "tot_cost": 13411560.896703022,
+  "tot_base": 16407319.631981425,
+  "tot_emg_qty": 0.0,
+  "days_with_emg": 0
+ },
+ "decoupling_gap": 1183394.333828492,
+ "decoupling_gap_pct": 0.08823688330859439
+}

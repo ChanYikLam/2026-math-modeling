@@ -1,0 +1,21 @@
+# ---- LaTeX 中间文件 ----
+build/
+*.aux
+*.log
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.bbl
+*.blg
+
+# ---- tectonic 缓存（首次编译自动下载，勿入库） ----
+.tectonic-cache/
+
+# ---- 定稿模式开关（每台机器自行 touch，不入库） ----
+final.flag
+
+# main.pdf 保留在版本库中，作为可随时查看的编译快照；
+# 若不希望提交二进制文件，取消下一行注释即可。
+# main.pdf

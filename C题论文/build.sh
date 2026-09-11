@@ -99,7 +99,7 @@ esac
 echo
 echo "编译完成。交付物："
 report main.pdf     "正文（摘要 + 正文 + 参考文献；正文上限 30 页、不含源程序）"
-report appendix.pdf "附录（A--S；页数不限，含全部源程序，需与正文一起装订）"
+report appendix.pdf "附录（A--E；页数不限，含全部源程序，需与正文一起装订）"
 report full.pdf     "合并版（正文 + 附录，备用）"
 
 if [ "${1:-build}" = "check" ]; then

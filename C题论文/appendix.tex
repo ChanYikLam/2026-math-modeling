@@ -4,7 +4,7 @@
 %
 %  交付形态（三个 PDF，共用同一套 sections/）
 %    main.pdf      摘要页 + 正文 + 参考文献      （正文 ≤30 页，不含任何源程序）
-%    appendix.pdf  附录 A--S                     （页数不限，含全部源程序）← 本文件
+%    appendix.pdf  附录 A--E                     （页数不限，含全部源程序）← 本文件
 %    full.pdf      正文 + 附录合并版              （备用，由 full.tex 产出）
 %
 %  重要：附录里有 40 余处回指正文的表、图、公式、命题与小节。附录单独编译时正文的
@@ -26,6 +26,8 @@
 
 % \bref：附录里回指正文（正文编号由 xr 取自 main.aux，"b-" 是 xr 的外部引用前缀）
 \renewcommand{\bref}[1]{正文\ref{b-#1}}
+% \chapref 同样要读正文编号，否则附录册里会渲染成「第 ?? 章」
+\renewcommand{\chapref}[1]{第\,\ref{b-#1}\,章}
 
 % 页码：与正文合订时附录自正文末页之后起算。
 % 正文末页号由 refcount 从 xr 引入的 b-pg:bodyend 取到；取不到时保持本文件页码不变。

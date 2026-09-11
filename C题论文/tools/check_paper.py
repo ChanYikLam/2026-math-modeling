@@ -386,7 +386,7 @@ def check_pdf(strict: bool) -> None:
 # 检查 7b：三个交付物（main / appendix / full）齐备且都不含 ??
 #   交付形态（用户指定）：
 #     main.pdf      摘要页 + 正文 + 参考文献（正文 ≤30 页，不含任何源程序）
-#     appendix.pdf  附录 A--O（独立文件，页数不限，含全部源程序，需与正文一起装订）
+#     appendix.pdf  附录 A--E（独立文件，页数不限，含全部源程序，需与正文一起装订）
 #     full.pdf      正文 + 附录合并版（备用）
 #   附录里有 39 处回指正文的引用，靠 appendix.tex 里的 xr 读 build/main.aux 解析；
 #   因此编译顺序必须是 main -> appendix。此检查同时守住"附录不能有 ?? 或标签名裸露"。
@@ -419,12 +419,12 @@ def check_deliverables() -> None:
         # pdftotext 会在标题处断行，故比较前先去掉空白
         flat = re.sub(r"\s+", "", txt)
         if not expect_appendix:
-            for marker in ("源程序：code/", "附录A", "支撑材料文件清单"):
+            for marker in ("源程序：code/", "附录A程序清单", "附录A支撑材料"):
                 if marker.replace(" ", "") in flat:
                     err(f"{path.name} 中出现了「{marker}」，正文那册不得含附录/源程序")
         else:
-            if "附录A支撑材料文件清单" not in flat:
-                err(f"{path.name} 未检出附录起始（附录A 支撑材料文件清单），"
+            if "附录A程序清单与运行说明" not in flat:
+                err(f"{path.name} 未检出附录起始（附录A 程序清单与运行说明），"
                     f"请确认已 \\input{{sections/90_appendix}}")
 
 
@@ -553,7 +553,7 @@ def check_appendix_locators() -> None:
     if bad:
         err("附录定位不一致（\appref 第二参数必须等于实际附录字母/小节号）：\n      " + "\n      ".join(bad))
     else:
-        ok(f"附录定位：正文 {checked} 处 \\appref 与实际附录编号（A--S）逐条一致")
+        ok(f"附录定位：正文 {checked} 处 \\appref 与实际附录编号（A--E）逐条一致")
 
 
 # ---------------------------------------------------------------------------

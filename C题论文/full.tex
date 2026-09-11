@@ -1,10 +1,10 @@
 %!TEX program = xelatex
 % =============================================================================
-%  full.tex —— 合并版入口：正文（= main.pdf 的全部内容）+ 附录 A--S
+%  full.tex —— 合并版入口：正文（= main.pdf 的全部内容）+ 附录 A--E
 %
 %  三个交付形态共用同一套 sections/：
 %    main.pdf      摘要 + 正文 + 参考文献（正文 ≤30 页，不含源程序）  ← main.tex
-%    appendix.pdf  附录 A--S（独立文件，页数不限，含全部源程序）      ← appendix.tex
+%    appendix.pdf  附录 A--E（独立文件，页数不限，含全部源程序）      ← appendix.tex
 %    full.pdf      正文 + 附录合并版（备用）                          ← 本文件
 %
 %  本文件里正文与附录排在同一文档中，因此附录回指正文的 \bref 直接取真实 \ref
@@ -30,7 +30,6 @@
 \input{sections/07_q2}
 \input{sections/08_q3}
 \input{sections/09_q4}
-\input{sections/09_validation}
 % 收尾层（第 10 章）
 \input{sections/10_evaluation}
 

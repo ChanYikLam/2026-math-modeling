@@ -570,8 +570,8 @@ def main():
     # ---- 与问题 4 主方案（情景式随机规划）对照 ----
     ref = {}
     try:
-        with open(os.path.join(C.INTERMEDIATE_DIR, "q4_2.json")) as f:
-            j = json.load(open(os.path.join(C.INTERMEDIATE_DIR, "q4_2.json")))
+        with open(os.path.join(C.INTERMEDIATE_DIR, "q4_2.json"), encoding="utf-8") as f:
+            j = json.load(f)
         m = j["meta"]
         ref = dict(source="intermediate/q4_2.json", model="情景式两阶段随机规划（K=60 联合情景）",
                    total_cost=m["total"], base_cost=m["base"], emg_qty=m["emg_qty"],
@@ -592,6 +592,24 @@ def main():
             dro_emg_qty=near["emg_qty"], q4_2_emg_qty=m["emg_qty"],
             emg_qty_ratio=near["emg_qty"] / m["emg_qty"],
             note="计划购电量相当时的紧急购电量对比：主方案把边际买在更需要的槽位")
+        # ---- 风险指标对照：与总费用、紧急购电量同一批逐日费用、同一 cvar_ru 函数 ----
+        # 附录 D.2 第 ③ 条的“CVaR95 高 x 元/日（+y%）”由此输出，避免手算口径漂移
+        sp_daily = np.array([r["total_cost"] for r in j["daily"]], float)
+        dro_daily = np.array([x["total_cost"] for x in dailies["k=%.1f" % best["k"]]], float)
+        sp_cvar, sp_var, sp_tail, _ = cvar_ru(sp_daily)
+        dr_cvar, dr_var, dr_tail, _ = cvar_ru(dro_daily)
+        ref["risk_vs_best_dro"] = dict(
+            k=best["k"], n_days=int(len(sp_daily)), alpha=ALPHA, unit="元/日",
+            caliber="逐日总费用；CVaR 用 cvar_ru（Rockafellar–Uryasev，eta=样本 0.95 分位）",
+            q4_2_cvar95=sp_cvar, dro_cvar95=dr_cvar, cvar95_diff=dr_cvar - sp_cvar,
+            cvar95_diff_pct=(dr_cvar - sp_cvar) / sp_cvar * 100.0,
+            q4_2_worst_day=float(sp_daily.max()), dro_worst_day=float(dro_daily.max()),
+            worst_day_diff=float(dro_daily.max() - sp_daily.max()),
+            worst_day_diff_pct=float((dro_daily.max() - sp_daily.max()) / sp_daily.max() * 100.0),
+            q4_2_var95=sp_var, dro_var95=dr_var,
+            q4_2_cvar95_tailmean=sp_tail, dro_cvar95_tailmean=dr_tail,
+            note="与 ref.diff_vs_best_dro / diff_pct（总费用）同源；正文 §9 与附录 D.2 第 ③ 条引用本节",
+        )
     except Exception as e:      # pragma: no cover
         ref = dict(error=str(e))
 
@@ -674,7 +692,7 @@ def main():
         daily=dailies,
         conclusion=concl,
     )
-    with open(args.out, "w") as f:
+    with open(args.out, "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, separators=(",", ":"))
     if args.fig:
         fp = os.path.join(C.FIGURE_DIR, "fig11_dro_conservatism.pdf")

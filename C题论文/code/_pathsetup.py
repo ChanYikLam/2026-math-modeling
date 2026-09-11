@@ -42,3 +42,20 @@ for _name in SUBDIRS:
     _path = os.path.join(CODE_DIR, _name)
     if os.path.isdir(_path) and _path not in sys.path:
         sys.path.insert(0, _path)
+
+
+def _force_utf8_stdio():
+    """把标准流钉在 UTF-8。
+
+    跨平台复现要求：本工程全部 JSON/文本产物都是 UTF-8（无 BOM），Windows 中文区的
+    控制台默认码页为 GBK，`print` 中文注释与文件名时会直接 `UnicodeEncodeError`。
+    这里不依赖调用方记得设 PYTHONUTF8，导入本模块即生效（幂等，出错静默）。
+    """
+    for _stream in (sys.stdout, sys.stderr):
+        try:
+            _stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):      # 重定向到不支持 reconfigure 的对象
+            pass
+
+
+_force_utf8_stdio()

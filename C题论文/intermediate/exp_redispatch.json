@@ -19,7 +19,7 @@
   "solver": "scipy.optimize.linprog(method='highs')，一天一个 LP（变量 c,d,S,g 各 144）",
   "random": "无随机数（seed 不适用）；结果由 HiGHS 确定性给出",
   "objective": "min sum_t 5 p_t g_t；计划购电费为沉没常数，不进目标",
-  "objective_note": "盈余行 s_t>=0 与 g_t>=0、紧急购电行联立 ⟹ 严格可行时 g_t 恒为 0，主目标在最优面上退化（c,d 不唯一、处置盈余随顶点漂移）；不可行的日子放开盈余行，g 取「计划固定下不可再减」的最小紧急购电量。故除主口径外另给 min_disposal / min_throughput 两个字典序对照，用于界定处置盈余的可达区间；其中 min_disposal 会违反 A3（同时充放），只作 LP 松弛参照",
+  "objective_note": "盈余行 s_t>=0 与 g_t>=0、紧急购电行联立 ⇒ 严格可行时 g_t 恒为 0，主目标在最优面上退化（c,d 不唯一、处置盈余随顶点漂移）；不可行的日子放开盈余行，g 取「计划固定下不可再减」的最小紧急购电量。故除主口径外另给 min_disposal / min_throughput 两个字典序对照，用于界定处置盈余的可达区间；其中 min_disposal 会违反 A3（同时充放），只作 LP 松弛参照",
   "constraints": [
    "E^plan_t - c_t + d_t >= nd^fcst_t（计划可行性行）",
    "g_t >= nd^act_t + c_t - d_t - E^plan_t, g_t >= 0",
@@ -161,7 +161,7 @@
     "R7_terminal": 0.0,
     "R8_simultaneous": 0
    },
-   "runtime_s": 3.3521478176116943,
+   "runtime_s": 2.050539016723633,
    "use_plan_row": true,
    "tie_break": "none",
    "solver": "scipy.optimize.linprog（HiGHS）",
@@ -204,7 +204,7 @@
     "R7_terminal": 0.0,
     "R8_simultaneous": 0
    },
-   "runtime_s": 5.107377290725708,
+   "runtime_s": 3.540907859802246,
    "use_plan_row": true,
    "tie_break": "min_throughput",
    "solver": "scipy.optimize.linprog（HiGHS）",
@@ -247,7 +247,7 @@
     "R7_terminal": 0.0,
     "R8_simultaneous": 58
    },
-   "runtime_s": 6.076045036315918,
+   "runtime_s": 3.7490689754486084,
    "use_plan_row": true,
    "tie_break": "min_disposal",
    "solver": "scipy.optimize.linprog（HiGHS）",
@@ -290,7 +290,7 @@
     "R7_terminal": 0.0,
     "R8_simultaneous": 0
    },
-   "runtime_s": 2.3458240032196045,
+   "runtime_s": 1.394256830215454,
    "use_plan_row": false,
    "tie_break": "none",
    "solver": "scipy.optimize.linprog（HiGHS）",
@@ -333,7 +333,7 @@
     "R7_terminal": 0.0,
     "R8_simultaneous": 0
    },
-   "runtime_s": 4.555499076843262,
+   "runtime_s": 2.9094622135162354,
    "use_plan_row": false,
    "tie_break": "min_throughput",
    "solver": "scipy.optimize.linprog（HiGHS）",
@@ -376,7 +376,7 @@
     "R7_terminal": 0.0,
     "R8_simultaneous": 79
    },
-   "runtime_s": 4.753674030303955,
+   "runtime_s": 3.188629150390625,
    "use_plan_row": false,
    "tie_break": "min_disposal",
    "solver": "scipy.optimize.linprog（HiGHS）",

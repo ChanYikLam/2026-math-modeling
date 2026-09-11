@@ -71,7 +71,7 @@ TOL = 1e-6
 def load_plan(panel, price, max_days=None):
     """读取主口径（K=60, scen=strat, info=R3）的 0:00 计划，构造逐日 LP 输入。"""
     path = os.path.join(C.INTERMEDIATE_DIR, PLAN_JSON)
-    j = json.load(open(path))
+    j = json.load(open(path, encoding="utf-8"))
     rows = j["daily"] if max_days is None else j["daily"][:max_days]
     load = panel.L(); pv_act = panel.PV()
     recs = []
@@ -618,7 +618,7 @@ def main():
             solver="scipy.optimize.linprog(method='highs')，一天一个 LP（变量 c,d,S,g 各 144）",
             random="无随机数（seed 不适用）；结果由 HiGHS 确定性给出",
             objective="min sum_t 5 p_t g_t；计划购电费为沉没常数，不进目标",
-            objective_note="盈余行 s_t>=0 与 g_t>=0、紧急购电行联立 ⟹ 严格可行时 g_t 恒为 0，"
+            objective_note="盈余行 s_t>=0 与 g_t>=0、紧急购电行联立 ⇒ 严格可行时 g_t 恒为 0，"
                            "主目标在最优面上退化（c,d 不唯一、处置盈余随顶点漂移）；"
                            "不可行的日子放开盈余行，g 取「计划固定下不可再减」的最小紧急购电量。"
                            "故除主口径外另给 min_disposal / min_throughput 两个字典序对照，"
@@ -664,7 +664,7 @@ def main():
         "per_day": {k: v["per_day"] for k, v in out.items()},
     }
     path = os.path.join(C.INTERMEDIATE_DIR, args.out)
-    with open(path, "w") as f:
+    with open(path, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=1)
     print(f"已写出 {path}")
     return payload

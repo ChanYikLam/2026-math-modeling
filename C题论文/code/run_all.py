@@ -74,7 +74,8 @@ def run(name, cmd):
     t0 = time.time()
     print("=" * 78)
     print(f"[{name}]  {' '.join(cmd)}")
-    r = subprocess.run(cmd, cwd=HERE)
+    env = dict(os.environ, PYTHONUTF8="1", PYTHONIOENCODING="utf-8")
+    r = subprocess.run(cmd, cwd=HERE, env=env)
     print(f"[{name}] 完成，耗时 {time.time()-t0:.1f}s，退出码 {r.returncode}")
     if r.returncode != 0:
         raise SystemExit(f"步骤失败：{name}")

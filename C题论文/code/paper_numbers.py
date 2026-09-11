@@ -18,7 +18,98 @@ NOTES = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 def load(name):
     p = os.path.join(INT, name)
-    return json.load(open(p)) if os.path.exists(p) else None
+    return json.load(open(p, encoding="utf-8")) if os.path.exists(p) else None
+
+
+def q2_margin_decomposition(q2, nomargin, scan):
+    """Q2 安全边际分解——由已提交的求解输出**现算**，不再读外部台账文件。
+
+    口径（可逐项由 intermediate/*.json 复算，无需重解 LP）：
+      边际成本 = 主口径计划购电费 − 无边际消融计划购电费
+               = ΣE^plan(主) − ΣE^plan(无边际)                       （正：边际推高计划购电费）
+      免灾收益 = 无边际紧急购电费 − 主口径紧急购电费                 （正：边际压低紧急购电费）
+      净收益   = 免灾收益 − 边际成本                                 （正文“安全边际的边际价值”）
+      边际电量 = 主口径计划购电费 − 无边际计划购电费 … 见下注释
+    说明：早期版本另存过一个 `q2_margin.json`（含 margin_kwh / margin_cost / dump_kwh 等），
+    那份文件在本工程内没有任何生成代码，且其 margin_kwh 口径已无法从当前提交的 JSON 复原，
+    故此处一律按上式现算，台账不再引用无出处的中间文件。
+    """
+    if not (q2 and nomargin):
+        return None
+    m, ab = q2["meta"], nomargin["meta"]
+    d_margin = float(m["tot_plan"] - ab["tot_plan"])
+    d_emg = float(ab["tot_emg"] - m["tot_emg"])
+    out = dict(
+        口径="主口径 K=60 分层 medoid 情景 − 消融 K=1 零残差（无安全边际），同 334 天同结算口径",
+        边际推高计划购电费=d_margin,
+        边际压低紧急购电费=d_emg,
+        净收益=d_emg - d_margin,
+        紧急购电量差_kWh=float(ab["tot_emg_qty"] - m["tot_emg_qty"]),
+        触发天数_主口径=int(m["days_with_emg"]), 触发天数_无边际=int(ab["days_with_emg"]),
+    )
+    if scan and scan.get("newsboy"):
+        nb = scan["newsboy"]
+        # 边际电量与均价来自 exp_scan 的报童经验覆盖率块（同一 q2_main.json 口径）
+        out.update(边际电量_kWh=nb.get("margin_total"),
+                   边际电量_每槽_kWh=nb.get("margin_per_slot"),
+                   边际电量_均价_元每kWh=(d_margin / nb["margin_total"]) if nb.get("margin_total") else None,
+                   缺货频率=nb.get("short_slot_rate"), 缺口电量_kWh=nb.get("short_energy"),
+                   电量满足率=nb.get("fill_rate"))
+    tot_plan = float(m["tot_plan"])
+    if tot_plan:
+        out["边际电量占计划购电量"] = (out.get("边际电量_kWh") or 0.0) / tot_plan
+    if m["tot_emg"]:
+        out["边际消掉的紧急购电费比例"] = d_emg / float(ab["tot_emg"])
+    return out
+
+
+# 窗口聚合口径（附录表 tab:agg 的“全天调整量与计划量之差”等九个数）
+#   计划/调整购电量 = 逐日 ΣE（计划口径 E^plan、执行口径 E^adj）
+#   充电量 / 放电量   = 逐日逐槽 Σc / Σd
+#   紧急购电量        = 逐日 Σg
+#   盈余处置量        = 逐日逐槽 Σ max(PV·Δt + max(E^exec − g, 0) + d − L·Δt − c, 0)
+#       C-06 口径（盈余只能处置、不能凭空消失）。其中 max(E−g,0) 是"计划购电量里被实际执行的
+#       部分"：g_t>0 的槽说明计划购电量不足以覆盖实际净需求、缺口另有 5p_t 紧急补足，
+#       该槽不存在光伏盈余。此式与 exp_redispatch.py 的冻结口径逐位一致
+#       （Q2 = 3 106 390.84 kWh），也与 Q4-2/Q4-3 的既有值逐位一致。
+WINDOW_SPECS = (
+    ("Q2", "q2_main.json", "E", None),
+    ("Q3", "q3_n4.json", "E_plan", "E_adj"),
+    ("Q4-2", "q4_2.json", "E", None),
+    ("Q4-3", "q4_3.json", "E_plan", "E_adj"),
+)
+
+
+def window_aggregates(panel):
+    """结果窗口（334 天）的量能聚合——由各问已提交的逐日解**现算**，不读外部台账文件。"""
+    Lm, PVm = panel.L(), panel.PV()
+    out = {}
+    for tag, fname, plan_key, adj_key in WINDOW_SPECS:
+        path = os.path.join(INT, fname)
+        if not os.path.exists(path):
+            continue
+        days = json.load(open(path, encoding="utf-8"))["daily"]
+        plan = adj = charge = discharge = emg = surplus = 0.0
+        for r in days:
+            E = np.asarray(r[plan_key], float)
+            if E.ndim != 1 or E.size != C.N_SLOT:
+                raise ValueError(
+                    f"{fname}: 逐日键 {plan_key!r} 不是 {C.N_SLOT} 维逐槽数组"
+                    f"（实为 ndim={E.ndim}, size={E.size}）——请改用具逐日逐槽数据的键，"
+                    "标量键会在下面的逐槽求和里被静默广播成 144 份")
+            EA = np.asarray(r[adj_key], float) if adj_key else E
+            c = np.asarray(r["c"], float); d = np.asarray(r["d"], float)
+            g = np.asarray(r["g"], float)
+            day = pd.Timestamp(r["date"]).normalize()
+            L = Lm.loc[day].to_numpy(float); PV = PVm.loc[day].to_numpy(float)
+            surplus += float(np.maximum(
+                PV * C.DT + np.maximum(EA - g, 0.0) + d - L * C.DT - c, 0.0).sum())
+            plan += float(E.sum()); adj += float(EA.sum())
+            charge += float(c.sum()); discharge += float(d.sum()); emg += float(g.sum())
+        out[tag] = dict(计划购电量=plan, 调整或执行购电量=adj, 充电量=charge, 放电量=discharge,
+                        紧急购电量=emg, 盈余处置量=surplus,
+                        全天调整量与计划量之差=adj - plan)
+    return out or None
 
 
 def f(x, n=2):
@@ -147,12 +238,13 @@ def main():
         N["Q4_3"]["四个指定日期"] = [r for r in q43["daily"] if r["date"][:10] in C.KEY_DATES]
     dual2 = load("q1_dual2.json")
     N["Q1对偶验证"] = dual2
-    N["Q2无安全边际消融"] = load("q2_noMargin.json")["meta"] if load("q2_noMargin.json") else None
-    N["Q2安全边际分解"] = load("q2_margin.json")
+    _nomargin = load("q2_noMargin.json")
+    N["Q2无安全边际消融"] = _nomargin["meta"] if _nomargin else None
+    N["Q2安全边际分解"] = q2_margin_decomposition(q2, _nomargin, scan)
     N["非预期性置换检验"] = load("exp_na.json")
     N["Sobol"] = load("exp_sobol.json")
     N["基准实验"] = load("exp_benchmark.json")
-    N["窗口聚合"] = load("window_aggregates.json")
+    N["窗口聚合"] = window_aggregates(panel)
     N["样本外回测"] = load("exp_oos.json")
     N["终端条件对照"] = {t: (load(f"q2_term_{t}.json") or {}).get("meta")
                     for t in ("ge", "eq", "free")}
@@ -227,7 +319,7 @@ def main():
     except Exception as exc:      # pragma: no cover - 台账不应因该可选块失败
         N["Sobol合计"] = dict(error=str(exc))
 
-    with open(os.path.join(INT, "paper_numbers.json"), "w") as fh:
+    with open(os.path.join(INT, "paper_numbers.json"), "w", encoding="utf-8") as fh:
         json.dump(N, fh, ensure_ascii=False, indent=1, default=str)
 
     # ---- Markdown 台账（供写作引用，单位与口径写全）----
@@ -411,7 +503,7 @@ def main():
             L.append(f"| {ent['K']} | {td:.3f} | {tb:.3f} | {td/tb:.2f}x | "
                      f"{max(r['rel_gap'] for r in rows):.2e} |")
         L.append("")
-    with open(os.path.join(NOTES, "数值台账.md"), "w") as fh:
+    with open(os.path.join(NOTES, "数值台账.md"), "w", encoding="utf-8") as fh:
         fh.write("\n".join(L))
     print("\n".join(L))
     return N

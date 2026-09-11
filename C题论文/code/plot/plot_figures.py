@@ -28,20 +28,26 @@ r"""
     fig04_q1_capacity_power.pdf      容量-功率双向扫描
     fig05_cost_waterfall.pdf         问题 1 成本分解瀑布图
     fig06_voi.pdf                    信息价值 VoI（预报时刻数 1/2/4/完全信息）
-    fig07_q2_emergency.pdf           问题 2 全年逐日紧急购电 + 报童两界
+    fig07_q2_emergency.pdf           问题 2 全年逐日紧急购电 + 报童两条方向性参照
     fig08_q4_price.pdf               附件 4 电价剖面（分位带 + 分时骨架）+ 残差 ACF
     fig09_cvar_frontier.pdf          CVaR 风险-费用前沿（依赖 q4_cvar.json，缺失则跳过）
     fig10_strategy_mechanism.pdf     问题 1 最优策略机制（PV 盈余/负荷/电价/SOC/充放电）
 """
 from __future__ import annotations
 
+import os as _os
+import sys as _sys
+
+_sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))  # -> code/
+import _pathsetup  # noqa: E402,F401  子目录引导：把 common/ 与各问目录加入 sys.path
+
 # ---------------------------------------------------------------------------
 # 0. 环境（必须在 import matplotlib 之前完成）
 # ---------------------------------------------------------------------------
 import os
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-PAPER_DIR = os.path.dirname(HERE)                    # C题论文/
+HERE = os.path.dirname(os.path.abspath(__file__))         # code/plot/
+PAPER_DIR = os.path.dirname(os.path.dirname(HERE))        # C题论文/
 WORKSPACE = os.path.dirname(PAPER_DIR)               # 工作区根目录
 MPL_CACHE = os.path.join(PAPER_DIR, "build", "mplcache")
 os.makedirs(MPL_CACHE, exist_ok=True)
@@ -451,7 +457,7 @@ def fig06():
 
 
 def fig07():
-    """问题 2 全年逐日紧急购电量 + 报童两界（缺货概率 1/10 与 1/5）。"""
+    """问题 2 全年逐日紧急购电量 + 报童两条方向性参照（缺货概率约 0.114 与 0.200）。"""
     q2 = load_json("q2_main.json")
     meta = q2["meta"]
     nb = load_json("exp_scan.json")["newsboy"]
@@ -470,9 +476,9 @@ def fig07():
     q80 = float(np.percentile(g, 80))
     q90 = float(np.percentile(g, 90))
     ax.axhline(q80, color="#e67e22", ls="--", lw=1.1,
-               label="报童界 1/5：日 %d%% 分位 = %s kWh" % (80, fnum(q80)))
+               label="口径一参照：日 %d%% 分位 = %s kWh" % (80, fnum(q80)))
     ax.axhline(q90, color="#c0392b", ls="-.", lw=1.1,
-               label="报童界 1/10：日 %d%% 分位 = %s kWh" % (90, fnum(q90)))
+               label="口径二参照（近似）：日 %d%% 分位 = %s kWh" % (90, fnum(q90)))
 
     month_ticks = [d for d in dates if d.day == 1]          # 仅 2025 年各月 1 日，避免出现次年 1 月
     ax.set_xticks(date2num(month_ticks))
@@ -482,7 +488,7 @@ def fig07():
     ax.set_xlabel("日期（2025-02-01 至 2025-12-31，共 %d 天）" % len(dates))
     ax.set_ylabel("紧急购电量（kWh·日$^{-1}$）")
     ax.legend(loc="upper left", fontsize=6.4, ncol=1)
-    note(ax, "逐槽缺货频率 %.2f%%（报童两界 1/10–1/5 的下侧）\n"
+    note(ax, "逐槽缺货频率 %.2f%%（报童两条方向性参照 0.114–0.200 的下侧）\n"
              "电量满足率 %.2f%%；全年紧急购电量 %s kWh\n"
              "有紧急购电天数 %d/%d；单日最大 %s kWh（%s）"
          % (nb["short_slot_rate"] * 100, nb["fill_rate"] * 100,

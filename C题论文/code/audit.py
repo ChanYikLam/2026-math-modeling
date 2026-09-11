@@ -17,6 +17,8 @@ A10 全天汇总列（全天购电量、全天购电费）
 """
 from __future__ import annotations
 
+import _pathsetup  # noqa: E402,F401  子目录引导：把 common/ 与各问目录加入 sys.path
+
 import json
 import os
 

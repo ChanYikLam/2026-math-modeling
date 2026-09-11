@@ -216,7 +216,8 @@ def check_figures() -> None:
         warn(
             "缺图（编译时会显示红框占位，不影响编译）："
             + "、".join(sorted(set(missing)))
-            + "。请由 C题代码/code/plot_fig*.py 生成后放入 figures/"
+            + "。请由 code/plot/plot_figures.py（图 3--图 10）或 code/plot/plot_figures_v2.py"
+            + "（图 11--图 15）生成后放入 figures/"
         )
     else:
         ok("插图：全部 \\includefig 引用的文件均已存在")
@@ -224,23 +225,89 @@ def check_figures() -> None:
 
 # ---------------------------------------------------------------------------
 # 检查 6：源程序是否齐备（格式规范第五条 —— 取消评奖资格类红线）
+#        双向核对：清单里的文件必须存在（正向），code/ 下的源程序必须全部入清单（反向）
 # ---------------------------------------------------------------------------
+CODE_DIR = ROOT / "code"
+# 源程序口径：code/ 下（含子目录）的全部 .py 与 requirements.txt；
+# 以 "_" 开头的是引导类辅助文件，同样必须入清单（它们也是参赛源程序的一部分）。
+CODE_SUFFIXES = {".py", ".txt"}
+
+
+def _listed_code(appendix_body: str) -> list[str]:
+    return re.findall(r"\\codefile(?:\[[^\]]*\])?\{([^}]+)\}", appendix_body)
+
+
+def _actual_code() -> list[str]:
+    out = []
+    for p in sorted(CODE_DIR.rglob("*")):
+        if not p.is_file() or p.suffix not in CODE_SUFFIXES:
+            continue
+        if "__pycache__" in p.parts or p.name.startswith("."):
+            continue
+        out.append(p.relative_to(CODE_DIR).as_posix())
+    return out
+
+
 def check_code_files() -> None:
     apx = SECTIONS / "90_appendix.tex"
     if not apx.exists():
         return
     body = strip_comments(apx.read_text(encoding="utf-8"))
-    names = re.findall(r"\\codefile(?:\[[^\]]*\])?\{([^}]+)\}", body)
-    missing = [n for n in names if not (ROOT / "code" / n).exists()]
+    names = _listed_code(body)
+
+    missing = [n for n in names if not (CODE_DIR / n).exists()]
     if missing:
         err(
             "附录源程序缺失（格式规范第五条：缺少必要源程序可能被取消评奖资格）："
             + "、".join(missing)
-            + "。请把全部可运行源程序放入 C题代码/code/（论文/code 为指向它的软链接），"
-            + "附录会自动原样引入；目录与命名口径见 C题代码/docs/00_代码目录与命名规范.md。"
+            + "。请把全部可运行源程序放入 C题论文/code/（按每一问一类分目录：common/ q1/ q2/ q3/ q4/ exp/ plot/，"
+            + "根目录放入口与工具），附录的 \\codefile 会自动原样引入；"
+            + "目录与命名口径见 论文/README.md。"
+        )
+
+    unlisted = [n for n in _actual_code() if n not in names]
+    if unlisted:
+        err(
+            "code/ 中存在未列入附录的源程序（格式规范第五条：论文未列全部源程序属红线）："
+            + "、".join(unlisted)
+            + "。请在 sections/90_appendix.tex 的附录 E 对应分节补 \\codefile{<相对 code/ 的路径>}"
+            "（公共模块 common/、问题 1--4 各 q1/--q4/、对照实验 exp/、绘图 plot/、根目录直接写文件名）。"
+        )
+
+    if not missing and not unlisted:
+        ok(
+            f"附录源程序：清单 {len(names)} 项与 code/ 下实际源程序 {len(_actual_code())} 个双向一致"
+            f"（{len(set(names))} 个唯一文件）"
+        )
+
+    check_run_all_coverage()
+
+
+def check_run_all_coverage() -> None:
+    """可复现性检查：四问、对照与绘图脚本必须都在 run_all.py 的计划内。
+
+    common/ 下是公共模块（由脚本 import，不需单独运行），run_all/_pathsetup 自身是入口与引导。
+    """
+    runner = CODE_DIR / "run_all.py"
+    if not runner.exists():
+        return
+    body = runner.read_text(encoding="utf-8")
+    runnable = [
+        n for n in _actual_code()
+        if n.endswith(".py")
+        and not n.startswith("common/")
+        and n not in ("run_all.py", "_pathsetup.py")
+    ]
+    absent = [n for n in runnable if n not in body]
+    if absent:
+        err(
+            "以下源程序不在 code/run_all.py 的复现计划内（一键复现会漏跑，论文数字将无法从零重建）："
+            + "、".join(absent)
+            + "。请把它们加入 STEPS（主链）/ FAST_EXTRA（信息结构与稳健性）/ "
+            "V2_EXTRA（对照、消融与图件）/ FINAL（审计与台账）之一。"
         )
     else:
-        ok(f"附录源程序：{len(names)} 个文件齐备（{len(set(names))} 个唯一文件）")
+        ok(f"一键复现：run_all.py 覆盖全部 {len(runnable)} 个可运行脚本（四问、对照、绘图、审计与台账）")
 
 
 # ---------------------------------------------------------------------------
@@ -436,6 +503,60 @@ def check_refs() -> None:
 
 
 # ---------------------------------------------------------------------------
+# 检查 9bis：附录定位核对（本次新增）
+#   背景：\appref 的第二个参数是**手写**的附录定位（实际字母/小节号 + 名称），
+#   它一旦与实际附录编号漂移，正文就会指向一个不存在的附录（"跳号附录"缺陷：
+#   正文引用 E/F/H/I/J，而附录实际是 A--S，A--D 与 G 从不被引用）。
+#   本检查从 sections/90_*.tex 的 \section / \subsection 顺序重建"标签 → 附录定位"，
+#   再逐条比对正文 \appref 的第二个参数前缀，任何不一致即失败。
+# ---------------------------------------------------------------------------
+def check_appendix_locators() -> None:
+    app_files = sorted(SECTIONS.glob("90_*.tex"))
+    if not app_files:
+        warn("附录定位核对：未找到 90_*.tex，跳过")
+        return
+    loc: dict[str, str] = {}
+    for path in app_files:
+        sec = 0
+        sub = 0
+        for line in strip_comments(path.read_text(encoding="utf-8")).splitlines():
+            if re.match(r"\s*\\section\{", line):
+                sec += 1
+                sub = 0
+            elif re.match(r"\s*\\subsection\{", line):
+                sub += 1
+            for m in re.finditer(r"\\label\{([^}]+)\}", line):
+                letter = chr(ord("A") + sec - 1) if sec else "?"
+                loc[m.group(1)] = f"{letter}.{sub}" if sub else letter
+
+    body_files = [p for p in sorted(SECTIONS.glob("*.tex")) if not p.name.startswith("90_")]
+    bad: list[str] = []
+    checked = 0
+    for p in body_files:
+        text = strip_comments(p.read_text(encoding="utf-8"))
+        for m in re.finditer(r"\\appref\{([^}]+)\}\{([^}]*)\}", text):
+            label, textarg = m.group(1), m.group(2)
+            line = text[: m.start()].count("\n") + 1
+            checked += 1
+            if label not in loc:
+                bad.append(f"{p.name}:{line} \\appref{{{label}}} 的标签在附录中不存在")
+                continue
+            claim = re.match(r"\s*([A-Z](?:\.\d+)?)\b", textarg)
+            if not claim:
+                bad.append(f"{p.name}:{line} \\appref{{{label}}} 的定位文字不以附录字母开头：{textarg!r}")
+                continue
+            if claim.group(1) != loc[label]:
+                bad.append(
+                    f"{p.name}:{line} \\appref{{{label}}} 写为「{claim.group(1)} …」，"
+                    f"实际应为「{loc[label]} …」"
+                )
+    if bad:
+        err("附录定位不一致（\appref 第二参数必须等于实际附录字母/小节号）：\n      " + "\n      ".join(bad))
+    else:
+        ok(f"附录定位：正文 {checked} 处 \\appref 与实际附录编号（A--S）逐条一致")
+
+
+# ---------------------------------------------------------------------------
 # 检查 9：行文风格（本次新增，只报"可机械判定"的项，全部为 WARNING）
 #   依据：论文写作规范——术语唯一、句长可控、标点体例统一。
 # ---------------------------------------------------------------------------
@@ -543,6 +664,7 @@ def main() -> int:
     check_pdf(args.strict)
     check_deliverables()
     check_refs()
+    check_appendix_locators()
     check_style()
 
     print("\n" + "-" * 78)

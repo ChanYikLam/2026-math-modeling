@@ -2,6 +2,12 @@
 """结果文件写出器（严格按附件 5 模板的列序、列名、日期范围）。"""
 from __future__ import annotations
 
+import os as _os
+import sys as _sys
+
+_sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))  # -> code/
+import _pathsetup  # noqa: E402,F401  子目录引导：把 common/ 与各问目录加入 sys.path
+
 import os
 
 import numpy as np
@@ -64,7 +70,7 @@ def emergency_frame(dates, g, tol=1e-6) -> pd.DataFrame:
         for a, b in groups:
             lab = f"{_hm(a)}-{_hm(b + 1)}"
             rows.append([day.strftime("%Y-%m-%d") if first else "", lab,
-                         round(float(gi[a:b + 1].sum()), 3)])
+                         round(float(gi[a:b + 1].sum()), 4)])
             first = False
     return pd.DataFrame(rows, columns=["日期", "购电时间段", "购电量"])
 

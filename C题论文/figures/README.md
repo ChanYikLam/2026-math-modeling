@@ -26,8 +26,9 @@
 ## 出图工程规范
 
 - **全部导出矢量 PDF**，PNG 只用于预览、不进论文（位图打印发糊且不可检索）；
-- 生成脚本统一放 `C题代码/code/plot_fig03..fig10_*.py`，**每张图一个函数**，
-  脚本名 = `plot_` + 图文件名（去 `.pdf`），与上表**逐行对应**；
+- 生成脚本统一放 `code/plot/`：图 3–图 10 在 `plot_figures.py`、图 11–图 15 在 `plot_figures_v2.py`，
+  **每张图一个函数**（`fig03()` … `fig15()`），函数名 = 图文件名（去 `.pdf`）去掉下划线前的部分，
+  与上表**逐行对应**；
 - **图注写在论文里**（`\caption{}`），不要写进图里；
 - 图中中文必须指定中文字体，否则出现方框：
   ```python
@@ -35,7 +36,7 @@
   matplotlib.rcParams["font.sans-serif"] = ["SimHei", "Songti SC", "Arial Unicode MS", "DejaVu Sans"]
   matplotlib.rcParams["axes.unicode_minus"] = False
   ```
-- 统一保存到 `C题代码/figures/`（经 `config.py` 的 `FIG_DIR` 取路径，**不要**写依赖当前工作目录的裸 `figures/`）：
+- 统一保存到 `C题论文/figures/`（脚本内由 `__file__` 反推工程根目录得到 `FIGDIR`，**不要**写依赖当前工作目录的裸 `figures/`）：
   `fig.savefig(FIG_DIR / f"{name}.pdf", format="pdf", bbox_inches="tight")`；
 - **配色语义全篇一致**（同一含义全文同色），建议：
   ```python

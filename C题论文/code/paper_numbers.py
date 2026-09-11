@@ -2,6 +2,8 @@
 """汇总全部论文数值 -> intermediate/paper_numbers.json 与 notes/数值台账.md（唯一数字源）。"""
 from __future__ import annotations
 
+import _pathsetup  # noqa: E402,F401  子目录引导：把 common/ 与各问目录加入 sys.path
+
 import json
 import os
 
@@ -27,6 +29,18 @@ def wan(x):
     return f"{x/1e4:,.2f}"
 
 
+# 旧键名 -> 其真实窗口（台账中逐条括注，避免 §3.4 的“同一句话两个窗口”）
+LEGACY_WINDOW = {
+    "负载均值_kW": "旧键名＝_全年365天",
+    "负载最小_kW": "旧键名＝_全年365天",
+    "负载最大_kW": "旧键名＝_全年365天",
+    "光伏均值_kW": "旧键名＝_全年365天",
+    "光伏峰值_kW": "旧键名＝_全年365天",
+    "负载日均电量_kWh": "旧键名＝_窗口334天",
+    "光伏日均电量_kWh": "旧键名＝_窗口334天",
+}
+
+
 def main():
     q1 = load("q1.json")
     q2 = load("q2_main.json")
@@ -47,11 +61,16 @@ def main():
 
     N = {}
     N["数据"] = dict(
-        负载均值_kW=float(load_m.to_numpy().mean()), 负载最小_kW=float(load_m.to_numpy().min()),
-        负载最大_kW=float(load_m.to_numpy().max()),
-        负载日均电量_kWh=float(load_m.loc[win].to_numpy().sum(1).mean() * C.DT),
-        光伏均值_kW=float(pv_m.to_numpy().mean()), 光伏峰值_kW=float(pv_m.to_numpy().max()),
-        光伏日均电量_kWh=float(pv_m.loc[win].to_numpy().sum(1).mean() * C.DT),
+        # --- 均值类：两类窗口都显式写出（原键名把 365 天均值与 334 天日均电量混在同一句）---
+        负载均值_kW_全年365天=float(load_m.to_numpy().mean()),
+        负载均值_kW_窗口334天=float(load_m.loc[win].to_numpy().mean()),
+        负载日均电量_kWh_窗口334天=float(load_m.loc[win].to_numpy().sum(1).mean() * C.DT),
+        光伏均值_kW_全年365天=float(pv_m.to_numpy().mean()),
+        光伏均值_kW_窗口334天=float(pv_m.loc[win].to_numpy().mean()),
+        光伏日均电量_kWh_窗口334天=float(pv_m.loc[win].to_numpy().sum(1).mean() * C.DT),
+        负载最小_kW_全年365天=float(load_m.to_numpy().min()),
+        负载最大_kW_全年365天=float(load_m.to_numpy().max()),
+        光伏峰值_kW_全年365天=float(pv_m.to_numpy().max()),
         固定电价均值=float(a1["price"].mean()), 固定电价最小=float(a1["price"].min()),
         固定电价最大=float(a1["price"].max()),
         波动电价均值=float(p4.to_numpy().mean()), 波动电价最小=float(p4.to_numpy().min()),
@@ -62,6 +81,14 @@ def main():
                                           - load_m.to_numpy().mean(0)).max()),
         附件1光伏为逐时段均值最大偏差=float(np.abs(a1["pv"].to_numpy()
                                           - pv_m.to_numpy().mean(0)).max()),
+        # --- 旧键名：保留兼容，数值一字不改；台账中逐条标注其实际窗口（见 LEGACY_WINDOW）---
+        负载均值_kW=float(load_m.to_numpy().mean()),
+        负载最小_kW=float(load_m.to_numpy().min()),
+        负载最大_kW=float(load_m.to_numpy().max()),
+        负载日均电量_kWh=float(load_m.loc[win].to_numpy().sum(1).mean() * C.DT),
+        光伏均值_kW=float(pv_m.to_numpy().mean()),
+        光伏峰值_kW=float(pv_m.to_numpy().max()),
+        光伏日均电量_kWh=float(pv_m.loc[win].to_numpy().sum(1).mean() * C.DT),
     )
     # 预报误差
     FC = np.vstack([panel.pv_forecast(d, 0) for d in panel.PV().index])
@@ -137,10 +164,68 @@ def main():
     v2chance = load("exp_chance.json")
     v2dro = load("exp_dro.json")
     v2dec = load("decomp.json")
+    v2pc = load("exp_pricecond.json")
     N["v2相依结构与生成器对照"] = v2cop
     N["v2机会约束"] = v2chance
     N["v2盒式鲁棒"] = v2dro
     N["v2L形分解"] = v2dec
+    N["v2负载条件化电价预测"] = v2pc
+
+    # ---- 假设 A12 的消融：实时再调度（正文表 24 的 RT 行）----
+    rtd = load("exp_redispatch.json") or {}
+    _rt = (rtd.get("summary") or {}).get("headline")
+    if _rt:
+        _frozen = (rtd.get("summary") or {}).get("frozen") or {}
+        _plan = ((rtd.get("meta") or {}).get("plan_json_meta") or {}).get("tot_plan")
+        _row = dict(rtd.get("redispatch", {}).get("redispatch_min_throughput") or {})
+        _row_effect = (rtd.get("summary") or {}).get("plan_row_effect") or {}
+        _mech = (rtd.get("summary") or {}).get("mechanism") or {}
+        rt_total = (_plan + _rt["emg_cost_yuan"]) if _plan is not None else None
+        frozen_total = (_plan + _frozen.get("emg_cost_yuan", 0.0)) if _plan is not None else None
+        base = ((load("q2_main.json") or {}).get("meta") or {}).get("tot_base")
+        N["A12实时再调度消融"] = dict(
+            口径="固定已结算的 E^plan（沉没），用当日实际净需求重优化 c,d,S,g；一天一个 LP",
+            frozen=dict(emg_kwh=_frozen.get("emg_kwh"), emg_cost=_frozen.get("emg_cost_yuan"),
+                        surplus_kwh=_frozen.get("surplus_kwh"),
+                        days_with_emg=_frozen.get("days_with_emg")),
+            redispatch=dict(emg_kwh=_rt.get("emg_kwh"), emg_cost=_rt.get("emg_cost_yuan"),
+                           surplus_kwh=_rt.get("surplus_kwh"),
+                           days_with_emg=_rt.get("days_with_emg")),
+            降幅=dict(emg_kwh_pct=_rt.get("emg_kwh_drop_pct"),
+                      emg_cost_pct=_rt.get("emg_cost_yuan_drop_pct"),
+                      surplus_pct=_rt.get("surplus_kwh_drop_pct")),
+            总费用=dict(计划项=_plan, frozen=frozen_total, redispatch=rt_total,
+                        节省额=(frozen_total - rt_total) if (frozen_total and rt_total) else None,
+                        相对基线节省率=((base - rt_total) / base * 100.0)
+                        if (base and rt_total) else None),
+            计划可行性行对照=dict(含行=_row_effect.get("emg_kwh_with_row"),
+                                  放开行=_row_effect.get("emg_kwh_without_row"),
+                                  结论=_row_effect.get("verdict")),
+            机制=_mech.get("soc_identity"),
+            边界="只放开调度、未联合重优化计划；故 63.49% 是该假设代价的下界",
+        )
+    N["非预期性置换检验"] = load("exp_na.json")
+    N["非预期性置换检验_K40对照"] = load("exp_na_K40_backup.json")
+
+    # ---- Sobol 一阶/总效应指数合计（正文 §9.3 与附录 K.3 引用的两个合计）----
+    _sb = load("exp_sobol.json") or {}
+    try:
+        _c = _sb.get("cost") or {}
+        if _c.get("S1"):
+            _c1 = float(sum(_c["S1"]))
+            _cT = float(sum(_c["ST"]))
+            _s = _sb.get("saving") or {}
+            _s1 = float(sum(_s.get("S1", []))) or None
+            _sT = float(sum(_s.get("ST", []))) or None
+            N["Sobol合计"] = dict(
+                购电费=dict(S1合计=_c1, ST合计=_cT, 交互贡献_百分点=(_cT - _c1) * 100.0,
+                            均值_元=_c.get("mean"), 方差=_c.get("var")),
+                节省率=(dict(S1合计=_s1, ST合计=_sT, 交互贡献_百分点=(_sT - _s1) * 100.0)
+                        if (_s1 and _sT) else None),
+                参数名=_c.get("names"),
+            )
+    except Exception as exc:      # pragma: no cover - 台账不应因该可选块失败
+        N["Sobol合计"] = dict(error=str(exc))
 
     with open(os.path.join(INT, "paper_numbers.json"), "w") as fh:
         json.dump(N, fh, ensure_ascii=False, indent=1, default=str)
@@ -148,14 +233,22 @@ def main():
     # ---- Markdown 台账（供写作引用，单位与口径写全）----
     L = ["# 论文数值台账（唯一数字源）", "",
          "> 由 code/paper_numbers.py 从各求解输出汇总；论文中每个数字都应能在本表找到。",
-         "> 口径：电量 kWh，功率 kW，费用 元；窗口 2025-02-01 至 2025-12-31（334 天）；",
-         "> 固定价=附件 1 电价，波动价=附件 4；储能 12000 kWh / 5000 kW / SOC 1200–10800 / 效率单边 0.9。", ""]
+         "> 口径：电量 kWh，功率 kW，费用 元；固定价=附件 1 电价，波动价=附件 4；储能 12000 kWh /",
+         "> 5000 kW / SOC 1200–10800 / 效率单边 0.9。",
+         "> 两类窗口并存（不可直接混用）：`_全年365天` = 附件 2/4 全样本 2025-01-01 至 2025-12-31"
+         "（365 天，含 1 月预热）；`_窗口334天` = 结果窗口 2025-02-01 至 2025-12-31（334 天）；"
+         "四问求解与 results/*.xlsx 一律为 334 天窗口。", ""]
     L.append("## 一、数据与预报")
+    L.append("")
+    L.append("> 窗口提示：均值类指标同时给出 `_全年365天` 与 `_窗口334天` 两行；"
+             "日均电量类指标为 `*_日均电量_kWh_窗口334天`（334 天窗口的日电量均值）。"
+             "旧键名（无后缀）保留兼容，逐行括注其实际窗口。")
     L.append("")
     L.append("| 量 | 数值 |")
     L.append("|---|---|")
     for k, v in N["数据"].items():
-        L.append(f"| {k} | {v:,.4f} |" if isinstance(v, float) else f"| {k} | {v} |")
+        key = f"{k}（{LEGACY_WINDOW[k]}）" if k in LEGACY_WINDOW else k
+        L.append(f"| {key} | {v:,.4f} |" if isinstance(v, float) else f"| {key} | {v} |")
     for k, v in N["预报误差"].items():
         L.append(f"| {k} | {np.round(v,2)} |")
     L.append("")
@@ -309,7 +402,7 @@ def main():
                  f"平均迭代 {e['mean_iters']:.2f} 次，全部收敛={e['all_converged']}；"
                  f"直接求解 {e['sum_t_direct']:.2f} s，分解 {e['sum_t_benders']:.2f} s。")
         L.append("")
-        L.append("| 情景数 K | 直接求解耗时 s | L 形分解耗时 s | 加速比 | 最大相对间隙 |")
+        L.append("| 情景数 K | 直接求解耗时 s（含建模） | L 形分解耗时 s（含主/子问题） | 加速比 | 最大相对间隙 |")
         L.append("|---|---|---|---|---|")
         for ent in v2dec["scenario_scan"]["entries"]:
             rows = ent["rows"]

@@ -31,6 +31,12 @@ A9 信息结构取 R3 | A10 波动电价下 0:00 可用电价预报 = 分时骨�
 """
 from __future__ import annotations
 
+import os as _os
+import sys as _sys
+
+_sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))  # -> code/
+import _pathsetup  # noqa: E402,F401  子目录引导：把 common/ 与各问目录加入 sys.path
+
 import os
 from dataclasses import dataclass
 
@@ -40,8 +46,8 @@ import pandas as pd
 # --------------------------------------------------------------------------
 # 路径
 # --------------------------------------------------------------------------
-HERE = os.path.dirname(os.path.abspath(__file__))
-PAPER_DIR = os.path.dirname(HERE)                       # C题论文/
+HERE = os.path.dirname(os.path.abspath(__file__))        # code/common/
+PAPER_DIR = os.path.dirname(os.path.dirname(HERE))       # C题论文/
 WORKSPACE = os.path.dirname(PAPER_DIR)                  # 工作区根
 PROBLEM_DIR = os.path.join(WORKSPACE, "CUMCM2026Problems(1)", "C题")
 ATTACH_DIR = os.path.join(PROBLEM_DIR, "附件")

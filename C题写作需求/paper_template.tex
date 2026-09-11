@@ -1,0 +1,631 @@
+%!TEX program = xelatex
+% =============================================================================
+%  paper_template.tex —— 数学建模竞赛论文「按问题分章」骨架模板
+%
+%  【这是什么】一份可直接编译、可直接填空的论文骨架，**不含任何具体题目内容**。
+%      结构：摘要（按问题分段）
+%            → 第 1–5 章 准备层（问题重述 / 问题分析 / 数据预处理与特征分析 / 模型假设 / 符号说明）
+%            → 第 6–9 章 问题层（每章固定 x.1 模型建立 / x.2 求解与结果 / x.3 检验与灵敏度）
+%            → 第 10 章 收尾层（模型评价与推广）+ 参考文献 + 附录 A/B/C
+%      核心特征：**不按「建模—求解—检验」分章，而按「问题」分章**；
+%      模型建立、求解、检验三个动作全部下沉到每个问题章内部。
+%
+%  【权威口径】C题写作需求/论文写作需求操作文档.md §3.0（总骨架）、§3.1（页数预算）、
+%      §3.2（三层逐章需求表）、§3.3（摘要 SOP）、§3.4（每问三段式配方）、
+%      §3.5（旧十章 → 新骨架映射）、§3.6（最容易做错的六件事）。
+%
+%  【怎么用】
+%      1. 只在正文各处替换〈…〉占位文字与 \ph 占位数字；骨架层级一律不动；
+%      2. 定稿前把下面的 \writemodetrue 改为 \writemodefalse（隐藏全部「写作提示」），
+%         并把 \ph 全部替换成真算出来的数字（严禁编造）；
+%      3. 编译：xelatex paper_template.tex（连编两遍以定交叉引用）
+%         或 tectonic paper_template.tex；本模板自足，不依赖任何外部图片文件。
+%
+%  【格式合规要点】（依据《全国大学生数学建模竞赛论文格式规范（2026 年修订稿）》）
+%      · 第一条 A4、上下左右页边距 ≥2.5 cm、左侧装订            -> geometry
+%      · 第三条 摘要专用页含标题与关键词、原则上 ≤1 页，
+%               页码自摘要页起、页脚中部、阿拉伯数字连续        -> fancyhdr + 本文件的摘要页
+%      · 第四条 正文不要目录、≤30 页                            -> 不加载 \tableofcontents
+%      · 第六条 摘要页、正文、附录任何地方不得出现参赛者/学校/赛区信息 -> 不设 \author
+%      · 第五条/第十一条 附录须含支撑材料文件列表与全部可运行源程序 -> 附录 A
+%      注：第八条不对字号/行距作统一要求。本模板用 12 pt；
+%          若正文超过 30 页上限，优先改 \documentclass 的 12pt 为 10pt/11pt，其次压缩篇幅。
+%
+%  【套用时最容易翻车的四点】（§3.6）
+%      ① 符号说明没覆盖全，正文半路冒出新符号；
+%      ② 假设表写了「验证方式」却在后文没有兑现（每条必须指到某个 x.3 的表）；
+%      ③ 各问的 x.1/x.2/x.3 编号层级不统一，导致编号与交叉引用错乱；
+%      ④ 后几问因为模型复用就只写「同问题一」——应写「仅修改 X 与 Y，其余同式 (x.n)；
+%         差异点有三：…」，把差异点说清。
+% =============================================================================
+\documentclass[12pt,a4paper]{ctexart}
+
+% ---------------------------------------------------------------------------
+% 1. 页面与版式 —— 格式规范第一条：A4，上下左右各 ≥2.5 cm
+% ---------------------------------------------------------------------------
+\usepackage[
+  a4paper,
+  top=2.5cm, bottom=2.5cm, left=2.5cm, right=2.5cm,
+  footskip=1.0cm
+]{geometry}
+\linespread{1.2}                     % 行距（第八条不作统一要求；调大会增页）
+\setlength{\parskip}{0pt}
+\setlength{\emergencystretch}{2em}
+\setlength{\textfloatsep}{7pt plus 2pt minus 2pt}
+\setlength{\intextsep}{7pt plus 2pt minus 2pt}
+\setlength{\floatsep}{7pt plus 2pt minus 2pt}
+
+% ---------------------------------------------------------------------------
+% 2. 页码 —— 格式规范第三条：自摘要页起、页脚中部、阿拉伯数字连续
+% ---------------------------------------------------------------------------
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot[C]{\normalfont\thepage}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+\fancypagestyle{plain}{%
+  \fancyhf{}\fancyfoot[C]{\normalfont\thepage}%
+  \renewcommand{\headrulewidth}{0pt}\renewcommand{\footrulewidth}{0pt}%
+}
+\pagenumbering{arabic}
+
+% ---------------------------------------------------------------------------
+% 3. 数学、表格、图形、引用
+% ---------------------------------------------------------------------------
+\usepackage{amsmath,amssymb,amsthm,mathrsfs,bm}
+\allowdisplaybreaks[2]
+\usepackage{booktabs,longtable,tabularx,array,multirow,makecell}
+\setlength{\tabcolsep}{4pt}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{caption}
+\captionsetup{font=small,labelfont=bf,labelsep=quad}
+\captionsetup[table]{position=top,skip=3pt}     % 中文体例：表注在上
+\captionsetup[figure]{position=bottom,skip=3pt} % 图注在下
+\usepackage[hidelinks]{hyperref}
+\hypersetup{pdfauthor={},pdfcreator={},pdftitle={}}   % 第六条：不留身份信息
+
+% ---------------------------------------------------------------------------
+% 4. 中文字体与符号归属（决定 PDF 里的中文能否被复制、打印是否正常）
+%    · macOS 的 STHeiti / Songti SC Bold 生成 ToUnicode 会失败 ⇒ 标题与加粗中文
+%      在 PDF 里"看得见、复制不出来"。改用 PingFang SC（ToUnicode 正常）作黑体，
+%      并对正文启用伪粗体，两个问题一起消失。
+%    · ① ② ③、→、〈〉、「」等符号若不指定，会被交给西文字体而**缺字消失**，
+%      这里把它们显式划入中文字符类。
+%    · 非 macOS 平台自动回退到 ctex 默认字体集（Windows: SimSun/SimHei）。
+% ---------------------------------------------------------------------------
+\IfFontExistsTF{Songti SC}{%
+  \setCJKmainfont{Songti SC}[AutoFakeBold=2.2]
+  \setCJKsansfont{Songti SC}[AutoFakeBold=2.2]
+  \setCJKmonofont{Songti SC}[AutoFakeBold=2.2]
+}{}
+\IfFontExistsTF{PingFang SC}{%
+  \setCJKfamilyfont{zhhei}{PingFang SC}[BoldFont=PingFang SC Semibold]
+  \renewcommand{\heiti}{\CJKfamily{zhhei}}
+}{}
+
+\ifdefined\xeCJKDeclareCharClass
+  \xeCJKDeclareCharClass{CJK}{"2460 -> "24FF}   % ①…⑳ 带圈数字
+  \xeCJKDeclareCharClass{CJK}{"2160 -> "217F}   % Ⅰ Ⅱ Ⅲ … ⅰ ⅱ ⅲ
+  \xeCJKDeclareCharClass{CJK}{"2190 -> "21FF}   % ← ↑ → ↓ 等箭头
+  \xeCJKDeclareCharClass{CJK}{"3008 -> "3011}   % 〈〉《》「」『』【】〔〕
+  \xeCJKDeclareCharClass{CJK}{"2018 -> "201D}   % 中文弯引号
+\else\ifdefined\xeCJKsetcharclass
+  \xeCJKsetcharclass{"2460}{"24FF}{1}
+  \xeCJKsetcharclass{"2160}{"217F}{1}
+  \xeCJKsetcharclass{"2190}{"21FF}{1}
+  \xeCJKsetcharclass{"3008}{"3011}{1}
+  \xeCJKsetcharclass{"2018}{"201D}{1}
+\fi\fi
+
+% ---------------------------------------------------------------------------
+% 5. 写作辅助宏（定稿时自动消失的那部分）
+%     \ph      占位数字：渲染为红色【待计算】，禁止编造
+%     \guide   写作提示：\writemodefalse 后整块消失
+%     \chapref 章引用：渲染为「第 6 章」，避免硬编码章号
+% ---------------------------------------------------------------------------
+\newif\ifwritemode
+\writemodetrue                       % ← 定稿前改为 \writemodefalse
+\definecolor{phred}{RGB}{200,0,0}
+\definecolor{guideblue}{RGB}{0,80,160}
+
+\newcommand{\ph}[1][待计算]{\textcolor{phred}{【#1】}}
+\newcommand{\guide}[1]{%
+  \ifwritemode\par\noindent{\small\color{guideblue}\textbf{【写作提示】}#1}\par\fi}
+\newcommand{\chapref}[1]{第~\ref{#1}~章}
+
+% 图占位：没有真实图片文件时也能编译（定稿时换成 \includegraphics）
+\newcommand{\figplaceholder}[2][0.28\textheight]{%
+  \fbox{\parbox[c][#1][c]{0.9\linewidth}{\centering\small #2}}}
+
+% ---------------------------------------------------------------------------
+% 6. 章节标题样式
+%    一级「1 问题重述」三号黑体居中；二级「5.1 模型建立」四号黑体；
+%    三级「5.3.1 内部一致性与基线对比」小四黑体。层级只此三级，不用 \paragraph。
+% ---------------------------------------------------------------------------
+\ctexset{
+  section = {
+    name       = {,},
+    number     = \arabic{section},
+    aftername  = \quad,
+    format     = \zihao{4}\heiti\centering,
+    beforeskip = 0.9ex plus .3ex minus .2ex,
+    afterskip  = 0.6ex plus .2ex,
+  },
+  subsection = {
+    name       = {,},
+    number     = \arabic{section}.\arabic{subsection},
+    aftername  = \quad,
+    format     = \zihao{-4}\heiti\raggedright,
+    beforeskip = 0.8ex plus .3ex minus .2ex,
+    afterskip  = 0.4ex plus .2ex,
+  },
+  subsubsection = {
+    name       = {,},
+    number     = \arabic{section}.\arabic{subsection}.\arabic{subsubsection},
+    aftername  = \quad,
+    format     = \zihao{-4}\heiti\raggedright,
+    beforeskip = 1.0ex plus .4ex minus .2ex,
+    afterskip  = 0.5ex plus .2ex,
+  },
+}
+\newcommand{\tabhead}[1]{\textbf{#1}}
+
+% =============================================================================
+\begin{document}
+
+% ---------------------------------------------------------------------------
+% 标题 + 摘要专用页（电子版第 1 页，页码 1；不含承诺书与编号页）
+%   版式：总起 2–3 句 → 逐问 1 段（方法 1 句 + 关键数值）→ 验证 1 段 → 边界 1 段
+% ---------------------------------------------------------------------------
+\begin{center}
+  {\zihao{3}\heiti 〈主标题：题目名 + 核心方法〉}\\[4pt]
+  {\zihao{4}\heiti ——〈副标题：模型框架一句话〉}
+\end{center}
+\vspace{0.6em}
+
+\begin{abstract}
+\noindent
+〈总起 2–3 句：题目要解决什么决策矛盾；本文用什么模型框架（含"为什么这样建模"的结构匹配理由）；下面分 N 问给出结果。〉
+
+\noindent\textbf{问题一}：〈模型名 + 一句结构理由〉。求得〈关键指标〉\ph 元，相对〈基线名〉节省 \ph\%。
+
+\noindent\textbf{问题二}：〈模型名 + 一句结构理由〉。求得〈关键指标〉\ph，相对〈基线名〉下降 \ph\%。
+
+\noindent\textbf{问题三}：〈模型名 + 一句结构理由〉。求得〈关键指标〉\ph，〈结论句〉。
+
+\noindent\textbf{问题四}：〈模型名 + 一句结构理由〉。求得〈关键指标〉\ph，〈结论句〉。
+
+\noindent
+〈验证 1 句：原始可行性残差、最优性间隙、费用独立复算三重检验 + 基线对比 + 敏感性范围。〉
+〈边界 1 句：结论的适用条件；不过度声称。〉
+
+\vspace{4pt}
+\noindent\textbf{关键词}：〈关键词 1〉；〈关键词 2〉；〈关键词 3〉；〈关键词 4〉；〈关键词 5〉
+\end{abstract}
+\newpage
+
+% =============================================================================
+% 准备层（第 1–5 章，约 4–5 页）：一次把底座铺完，后面各问不再重复。
+%   顺序：读懂题（1）→ 想清楚（2）→ 读懂数据（3）→ 立假设（4）→ 定符号（5）。
+%   第 3 章数据预处理是本题的必要独立章：时标语义错则全文错位、附件身份决定问题一的口径、
+%   预报误差分档是问题二/三/四灵敏度的共同依据。
+% =============================================================================
+
+\section{问题重述}\label{sec:restate}
+\guide{只做两件事：把题目语言改写成自己的语言，并把「要交什么」列清楚。1.2 的编号顺序必须与第 6–9 章一一对应。}
+
+\subsection{问题背景}
+〈3–5 句：题目的经济/工程动机是什么；决策矛盾出在哪（何时知道什么、何时决定什么、按什么结算）。〉
+
+\subsection{需要解决的问题}
+\begin{enumerate}
+  \item 〈问题一：给定什么、要求什么、要给出哪些指定格式的表。〉
+  \item 〈问题二：……〉
+  \item 〈问题三：……〉
+  \item 〈问题四：……〉
+\end{enumerate}
+
+\subsection{交付物}
+\begin{table}[htbp]\centering\small
+  \caption{结果文件与题面指定表格的对应关系}\label{tab:deliverable}
+  \begin{tabular}{llll}
+    \toprule
+    \tabhead{结果文件} & \tabhead{对应题目} & \tabhead{题面表格} & \tabhead{内容} \\
+    \midrule
+    \texttt{result1.xlsx} & 问题一 & 表 1 / 表 2 & 〈内容〉 \\
+    \texttt{result2.xlsx} & 问题二 & 表 1 / 表 2 / 表 3 & 〈内容〉 \\
+    \texttt{result3.xlsx} & 问题三 & 表 1 / 表 2 / 表 3 & 〈内容〉 \\
+    \texttt{result4-2.xlsx} & 问题四（对应问题二） & — & 〈内容〉 \\
+    \texttt{result4-3.xlsx} & 问题四（对应问题三） & — & 〈内容〉 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+% ---------------------------------------------------------------------------
+\section{问题分析}\label{sec:analysis}
+\guide{全篇最重要的「锚」在这里。2.1 的诊断表是全篇统一性的合法性来源；2.3 那句「两个开关」决定后三问的建模部分能写多短。}
+
+\subsection{子问题结构诊断}
+〈每问一行。此表是后文各问的索引，也证明四问不是四篇互不相干的报告。〉
+
+\begin{table}[htbp]\centering\footnotesize
+  \caption{子问题的数学结构诊断}\label{tab:diagnosis}
+  \begin{tabular}{p{0.09\linewidth}p{0.20\linewidth}p{0.24\linewidth}p{0.24\linewidth}p{0.14\linewidth}}
+    \toprule
+    \tabhead{子问题} & \tabhead{信息结构} & \tabhead{数学特征} & \tabhead{决定性建模要素} & \tabhead{主结果} \\
+    \midrule
+    问题一 & 〈决策时刻数 / 已知量 / 未知量〉 & 〈LP / NLP / 整数 / 两阶段 / 多阶段〉 & 〈决定成败的那一两条约束或参数〉 & 〈关键指标〉 \\
+    问题二 & 〈……〉 & 〈……〉 & 〈……〉 & 〈……〉 \\
+    问题三 & 〈……〉 & 〈……〉 & 〈……〉 & 〈……〉 \\
+    问题四 & 〈……〉 & 〈……〉 & 〈……〉 & 〈……〉 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{关键矛盾与突破口}
+\begin{enumerate}
+  \item \textbf{矛盾一}：〈矛盾是什么 → 它决定了哪个建模动作。〉
+  \item \textbf{矛盾二}：〈……〉
+  \item \textbf{矛盾三}：〈……〉
+\end{enumerate}
+
+\subsection{问题依赖关系}
+〈决策时序图说明"什么时候知道什么、决定什么、按什么结算"；依赖图说明"每个子问题给下游提供什么"。〉
+
+\begin{figure}[htbp]\centering
+  \figplaceholder{图 1　决策时序图（信息泳道 / 决策泳道 / 结算泳道）\\[2pt] 〈用真实 TikZ 图替换本占位框〉}
+  \caption{决策时序图（对象 + 时间范围 + 单位 + 样本/情景数）}\label{fig:timeline}
+\end{figure}
+
+\begin{figure}[htbp]\centering
+  \figplaceholder{图 2　子问题依赖图（每条箭头标注"提供什么"）\\[2pt] 〈用真实 TikZ 图替换本占位框〉}
+  \caption{子问题依赖关系与误差传播路径}\label{fig:dependency}
+\end{figure}
+
+\noindent\textbf{一个模型族、两个开关。}〈一句话写成统一性声明，例如："N 个子问题共用同一套状态变量与同一组约束（能量平衡、储能递推、容量与功率界），
+只由 \textbf{〈开关一：外生参数向量〉} 与 \textbf{〈开关二：信息层数/决策时刻数〉} 区分。"〉
+
+\noindent〈同时必须声明：哪些子问题新增了\textbf{结构性}对象（如情景维度、非预期性约束、风险度量），而不是"换个向量"。〉
+
+% ---------------------------------------------------------------------------
+\section{数据预处理与特征分析}\label{sec:data}
+\guide{本章只写\emph{会被后文引用}的结论：时标语义 → 第 4 章假设的依据与全部公式的时段下标；附件身份 → 各问能否用实测值；相关性与预报误差 → 各问 x.3 的灵敏度档位。后文不引用的统计分析一律移附录 B，本章守住 1–1.5 页。}
+
+\subsection{时标与口径对齐}
+〈附件标签语义（标签是"时段起点"还是"时段末端"）；时间粒度与整点的对应（例：144 个 10 min 槽 ↔ 24 个整点）；单位与量纲自检（kW 与 kWh 差一个 $\Delta t$，是最容易整体错若干倍的地方）；关键附件的\textbf{数据身份核查}（是实际值、预报值还是历史均值？能否用作验证集？）。〉
+
+\begin{table}[htbp]\centering\footnotesize
+  \caption{附件身份与用途核查}\label{tab:data-identity}
+  \begin{tabular}{p{0.10\linewidth}p{0.24\linewidth}p{0.20\linewidth}p{0.32\linewidth}}
+    \toprule
+    \tabhead{附件} & \tabhead{内容} & \tabhead{身份} & \tabhead{本文用途} \\
+    \midrule
+    〈附件 n〉 & 〈内容〉 & 〈实际值 / 预报值 / 历史均值〉 & 〈计划依据 / 结算依据 / 验证集 / 仅作背景〉 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{相关性与特征分析}
+〈相关性的\textbf{尺度拆解}：不同时间尺度（全年 / 季节 / 日内）可能给出不同甚至反号的结论，必须分档报出并各带\textbf{样本量}；关键变量的形态特征（峰谷结构、日内形状）。相关不等于因果，不写因果措辞。〉
+
+\subsection{预报误差分档}
+〈预报相对实际的误差统计：全样本与子样本\textbf{双口径}（如全天 / 白天）、分位数与偏态、最坏情形。\textbf{这一节给出的误差档位将直接成为各问 x.3 灵敏度分析的档位}，两处必须一致。〉
+
+\subsection{明细与口径}
+〈正文只留上面三节的结论；长明细表（逐时段统计、信息准则表、误差统计表、缺失与异常清单）移\textbf{附录 B}，此处保留一句指引："完整明细见附录 B 表 B-x"。〉
+
+% ---------------------------------------------------------------------------
+\section{模型假设}\label{sec:assumption}
+\guide{表格四列缺一不可；「依据」列优先引用第 3 章的核查结论；「验证方式」一列必须能指到某个问题章的 x.3 表，否则该假设在定稿时会被判定为"没验证"。}
+
+\subsection{模型假设}
+\begin{table}[htbp]\centering\footnotesize
+  \caption{模型假设及其依据与验证方式}\label{tab:assumption}
+  \begin{tabular}{p{0.06\linewidth}p{0.26\linewidth}p{0.26\linewidth}p{0.32\linewidth}}
+    \toprule
+    \tabhead{编号} & \tabhead{假设内容} & \tabhead{依据} & \tabhead{验证方式} \\
+    \midrule
+    A1 & 〈假设内容〉 & 〈题面 / 数据 / 常识依据；
+         数据类依据请引用第 3 章结论（如 3.1 的时标语义）〉 & 〈→ 见 6.3.2 的参数灵敏度表〉 \\
+    A2 & 〈……〉 & 〈……〉 & 〈→ 见 7.3.2〉 \\
+    A3 & 〈……〉 & 〈……〉 & 〈→ 见 8.3.1 的残差表〉 \\
+    $\vdots$ & & & \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{信息结构声明}
+〈把"决策者在该时刻到底知道什么"写成 R1/R2/R3 式的候选解读，声明主方案，并说明计划依据与结算依据是两套数据。〉
+
+% ---------------------------------------------------------------------------
+\section{符号说明}\label{sec:symbol}
+\guide{符号表覆盖全部 N 问，宁可多列；正文每个公式里的符号都必须能在此查到。上下标约定单独一句写清。}
+
+\subsection{符号说明}
+〈上下标约定：$t$ 时段、$\omega$ 情景、$n$ 决策层、$k$ 迭代……〉
+
+\begin{table}[htbp]\centering\small
+  \caption{主要符号说明}\label{tab:symbol}
+  \begin{tabular}{llll}
+    \toprule
+    \tabhead{符号} & \tabhead{含义} & \tabhead{单位} & \tabhead{出现于} \\
+    \midrule
+    $t$ & 时段索引 & — & 全文 \\
+    $x_t$ & 〈决策变量〉 & 〈单位〉 & 问题一、二 \\
+    $\omega$ & 情景索引 & — & 问题二、四 \\
+    $\nu_t$ & 〈对偶变量/影子价格〉 & 元/kWh & 问题一 \\
+    $\vdots$ & & & \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+% =============================================================================
+% 问题层（每问一章，章内固定三段 x.1 / x.2 / x.3）
+%   以下以「问题一」为完整示范；问题二/三/四 同构复制，逐段替换内容即可。
+% =============================================================================
+
+\section{问题一：〈一句话概括本问要做什么〉}\label{sec:q1}
+
+\subsection{模型建立}
+\guide{五步固定顺序：变量定义 → 目标函数 → 约束逐条列式并编号 → 模型类型判断 →（复杂问才）子模块拆解。只引用第 5 章的符号，不新造。}
+
+\noindent\textbf{（1）决策变量。}〈定义变量与其取值范围，符号全部来自第 5 章。〉
+
+\noindent\textbf{（2）目标函数。}
+\begin{equation}\label{eq:q1-obj}
+  \min\ Z=\sum_{t}\ \bigl[\ \cdots\ \bigr]
+\end{equation}
+〈式 (1) 中每个系数来自哪里（哪个附件、哪个倍数）必须写明。〉
+
+\noindent\textbf{（3）约束条件。}逐条列式并编号：
+\begin{align}
+  &\text{〈约束名称 1：如电量平衡〉} & &\cdots & &\label{eq:q1-c1}\\
+  &\text{〈约束名称 2：如储能递推〉} & &\cdots & &\label{eq:q1-c2}\\
+  &\text{〈约束名称 3：如容量与功率界〉} & &\cdots & &\label{eq:q1-c3}\\
+  &\text{〈约束名称 4：如周期/终端条件〉} & &\cdots & &\label{eq:q1-c4}
+\end{align}
+〈说明哪一条是紧约束、哪一条在数值上从不活跃——这是后文灵敏度的伏笔。〉
+
+\noindent\textbf{（4）模型类型判断。}〈因目标与约束均为线性 → 线性规划（LP）；若含整数变量 → MILP；若含情景 → 两阶段随机规划；等等。给出结构理由，不要只贴标签。〉
+
+\subsection{模型求解与结果分析}
+\guide{四件固定：求解器与算法 1 段 → 总结果表 → 代表样本明细表（题面指定样本必须给全）→ 1 张图。算法细节压成伪代码块或移附录 C。}
+
+\noindent〈求解器（名称/版本）+ 问题规模（变量数/约束数）+ 单日与全窗求解时间，一段写完。〉
+
+\begin{table}[htbp]\centering\small
+  \caption{问题一的主要结果}\label{tab:q1-main}
+  \begin{tabular}{lrr}
+    \toprule
+    \tabhead{指标} & \tabhead{数值} & \tabhead{单位} \\
+    \midrule
+    〈主要指标 1〉 & \ph & 元 \\
+    〈主要指标 2〉 & \ph & kWh \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[htbp]\centering\footnotesize
+  \caption{题面指定格式的明细结果（按题目要求的时段分组）}\label{tab:q1-detail}
+  \begin{tabular}{lrrlrr}
+    \toprule
+    \tabhead{时段} & \tabhead{〈列 1〉} & \tabhead{〈列 2〉} & \tabhead{时段} & \tabhead{〈列 1〉} & \tabhead{〈列 2〉} \\
+    \midrule
+    〈时段〉 & \ph & \ph & 〈时段〉 & \ph & \ph \\
+    \midrule
+    \tabhead{合计} & \ph & \ph & & & \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[htbp]\centering
+  \figplaceholder[0.22\textheight]{图 3　〈本问的招牌图：机制/结构/前沿〉\\[2pt] 〈用真实矢量图替换本占位框〉}
+  \caption{〈对象 + 时间范围 + 单位 + 样本量/情景数〉}\label{fig:q1}
+\end{figure}
+
+\subsection{检验与灵敏度分析}
+\guide{三个固定动作缺一不可：① 内部一致性/恒等式残差表；② 基线对比（"不做 X 时费用 Y，做了省 Z\%"）；③ 关键参数灵敏度表 + "结论是否改变"的判断。最后一段稳健性小结。}
+
+\subsubsection{内部一致性与基线对比}
+\begin{table}[htbp]\centering\footnotesize
+  \caption{内部一致性检验（恒等式残差）}\label{tab:q1-residual}
+  \begin{tabular}{llll}
+    \toprule
+    \tabhead{检验项} & \tabhead{恒等式/约束} & \tabhead{最大残差} & \tabhead{阈值} \\
+    \midrule
+    〈项 1〉 & 〈式号〉 & \ph & $\le 10^{-6}$ \\
+    〈项 2〉 & 〈式号〉 & \ph & $\le 10^{-6}$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\noindent\textbf{基线对比。}〈"不做〈优化动作〉时费用为 \ph 元，做了之后为 \ph 元，下降 \ph\%"。基线定义必须与全文其他问题一致。〉
+
+\subsubsection{关键参数的灵敏度分析}
+\begin{table}[htbp]\centering\footnotesize
+  \caption{〈关键参数〉的灵敏度分析}\label{tab:q1-sens}
+  \begin{tabular}{lrrrl}
+    \toprule
+    \tabhead{参数档位} & \tabhead{目标值} & \tabhead{相对基准变化} & \tabhead{单位} & \tabhead{结论是否改变} \\
+    \midrule
+    〈低档〉 & \ph & \ph\% & 元 & 〈不变 / 反转〉 \\
+    〈基准〉 & \ph & — & 元 & — \\
+    〈高档〉 & \ph & \ph\% & 元 & 〈不变 / 反转〉 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsubsection{稳健性小结}
+〈3–5 句：① 结论方向是否稳定；② 在什么条件下会反转（给出临界值与盈亏平衡点）；③ 因此推荐什么、不建议什么。这一段是第 10 章可以直接引用的证据源。〉
+
+% ---------------------------------------------------------------------------
+\section{问题二：〈一句话概括〉}\label{sec:q2}
+\guide{与问题一同构：x.1 / x.2 / x.3 三段一个都不能少。模型复用时，x.1 要写清「仅修改了哪两处，其余同式 (x.n)」并列出差异点。}
+
+\subsection{模型建立}
+〈变量 → 目标 → 约束逐条编号 → 模型类型判断。复用上一问的式子时写"仅修改〈X〉与〈Y〉，其余同式 \eqref{eq:q1-obj}--\eqref{eq:q1-c4}；差异点有三：…"〉
+\begin{equation}\label{eq:q2-obj}
+  \min\ Z_2=\cdots
+\end{equation}
+
+\subsection{模型求解与结果分析}
+〈求解器 1 段 + 总结果表 + 代表样本明细表 + 1 张图。〉
+\begin{table}[htbp]\centering\small
+  \caption{问题二的主要结果}\label{tab:q2-main}
+  \begin{tabular}{lrr}
+    \toprule
+    \tabhead{指标} & \tabhead{数值} & \tabhead{单位} \\
+    \midrule
+    〈主要指标〉 & \ph & 〈单位〉 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{检验与灵敏度分析}
+\subsubsection{内部一致性与基线对比}
+〈残差表 + 基线对比（给出下降百分比）。〉
+\subsubsection{关键参数的灵敏度分析}
+〈1–2 个关键参数的扰动表 + "结论是否改变"判断。〉
+\subsubsection{稳健性小结}
+〈3–5 句。〉
+
+% ---------------------------------------------------------------------------
+\section{问题三：〈一句话概括〉}\label{sec:q3}
+\guide{若本问特别复杂（如多阶段模型），可在 x.1 下加三级标题拆解子模块（例如「预报需求分析」）；三级标题在四问中同名同序。}
+
+\subsection{模型建立}
+\subsubsection{〈子模块 1：如决策结构与成本线性化〉}
+〈……〉
+\subsubsection{〈子模块 2：如非预期性约束及其实现〉}
+\begin{equation}\label{eq:q3-nonant}
+  \cdots
+\end{equation}
+\subsubsection{〈子模块 3：如题面直接设问的分析，例："预报需求分析"〉}
+〈正面回答题目设问，不要绕。〉
+
+\subsection{模型求解与结果分析}
+〈算法 1 段（复杂算法给一个四段式伪代码块：输入 / 输出 / 主循环 / 返回）+ 总结果表 + 代表样本明细表 + 1 张图。〉
+\begin{table}[htbp]\centering\small
+  \caption{问题三的主要结果}\label{tab:q3-main}
+  \begin{tabular}{lrr}
+    \toprule
+    \tabhead{指标} & \tabhead{数值} & \tabhead{单位} \\
+    \midrule
+    〈主要指标〉 & \ph & 〈单位〉 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{检验与灵敏度分析}
+\subsubsection{内部一致性与基线对比}
+〈残差表 + 基线对比（如"仅用单次信息 vs 多次信息"，给出信息价值与其占理论上界的比例）。〉
+\subsubsection{关键参数的灵敏度分析}
+〈如信息层数、预报误差档位。〉
+\subsubsection{稳健性小结}
+〈3–5 句，必须正面回答"是否需要引入更多信息/更复杂的机制"。〉
+
+% ---------------------------------------------------------------------------
+\section{问题四：〈一句话概括〉}\label{sec:q4}
+\guide{本问常是前几问在更一般设定下的重算：把"重算"写成"同一模型族更换〈某开关〉"，差异点逐条列出，篇幅可以最短，但三段式不可省。}
+
+\subsection{模型建立}
+〈新引入的机制建模（如随机过程、风险度量、联合分布）；其余写"仅修改〈X〉与〈Y〉，其余同式 (x.n)"。〉
+\begin{equation}\label{eq:q4-obj}
+  \min\ Z_4=\cdots
+\end{equation}
+
+\subsection{模型求解与结果分析}
+〈求解器 1 段 + 跨结构对照总结果表 + 代表样本明细表 + 1 张图。〉
+\begin{table}[htbp]\centering\small
+  \caption{各设定下主要结果的对照}\label{tab:q4-main}
+  \begin{tabular}{lrrr}
+    \toprule
+    \tabhead{设定} & \tabhead{〈指标 1〉} & \tabhead{〈指标 2〉} & \tabhead{相对变化} \\
+    \midrule
+    〈基准设定〉 & \ph & \ph & — \\
+    〈本问设定〉 & \ph & \ph & \ph\% \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{检验与灵敏度分析}
+\subsubsection{内部一致性与基线对比}
+〈残差表 + 与"同结构但不更换开关"的基线对比。〉
+\subsubsection{关键参数的灵敏度分析}
+〈1–2 个关键参数（如波动幅度、风险置信水平、情景生成范式）。〉
+\subsubsection{稳健性小结}
+〈3–5 句。〉
+
+% =============================================================================
+% 收尾层（第 10 章 + 参考文献 + 附录 A/B/C）
+% =============================================================================
+
+\section{模型评价与推广}\label{sec:evaluation}
+
+\subsection{模型优点}
+\begin{enumerate}
+  \item 〈优点 1，带"人无我有"的亮点（如：一个模型族 + 两个开关，全文统一）。〉
+  \item 〈优点 2（如：关键结论可证最优 / 有闭式或阈值律）。〉
+  \item 〈优点 3（如：显式处理退化性与边界情形）。〉
+  \item 〈优点 4（如：全部数字可由源程序独立复算）。〉
+\end{enumerate}
+
+\subsection{模型缺点与改进方向}
+〈每条缺点后\emph{紧跟}一条具体改进方案，并写清"影响方向 + 验证路径"。〉
+\begin{enumerate}
+  \item 〈缺点 1〉。\textbf{改进}：〈具体怎么改、改完怎么验证。〉
+  \item 〈缺点 2〉。\textbf{改进}：〈……〉
+\end{enumerate}
+
+\subsection{推广}
+\begin{enumerate}
+  \item 〈场景 1：改哪个参数 / 加哪个约束即可迁移。〉
+  \item 〈场景 2：……〉
+  \item 〈场景 3：……〉
+\end{enumerate}
+
+% ---------------------------------------------------------------------------
+% 参考文献：7–10 条，教材 + 领域综述 + 算法原始文献 + 竞赛规范。
+% 手动 thebibliography（不依赖 bibtex），逐条核对官方原文，宁可少引不可引错。
+% ---------------------------------------------------------------------------
+\begin{thebibliography}{99}\small
+  \bibitem{ref1} 〈作者. 题名[M]. 版本. 出版地: 出版社, 年.〉
+  \bibitem{ref2} 〈作者. 题名[J]. 期刊名, 年, 卷(期): 起止页.〉
+  \bibitem{ref3} 〈全国大学生数学建模竞赛论文格式规范（2026 年修订稿）〉
+  \bibitem{ref4} 〈……〉
+\end{thebibliography}
+
+% ---------------------------------------------------------------------------
+% 附录（页数不限，须与正文一起打印装订）
+%   A 程序清单：支撑材料文件列表 + 全部完整可运行源程序 + 运行环境/说明/种子
+%   B 结果文件说明：文件名 → 内容 + 数据字典 + 明细表
+%   C 关键推导：正文放不下的证明与推导
+%   （本题扩展 D/E：独立审计与验证链、口径定义汇总——排在 A/B/C 之后）
+% ---------------------------------------------------------------------------
+\newpage
+\appendix
+\ctexset{section = {name = {附录,}, number = \Alph{section}, format = \zihao{4}\heiti\centering}}
+
+\section{主要程序清单}\label{app:code}
+\begin{table}[htbp]\centering\small
+  \caption{支撑材料文件清单（与压缩包逐项对应）}\label{tab:app-files}
+  \begin{tabular}{lll}
+    \toprule
+    \tabhead{文件} & \tabhead{职责} & \tabhead{产出} \\
+    \midrule
+    \texttt{〈run\_all.py〉} & 〈一键复现全部结果〉 & 〈全部结果文件〉 \\
+    \texttt{〈…〉} & 〈……〉 & 〈……〉 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+\noindent〈运行环境与依赖版本、运行说明（怎么跑、预期多久）、随机种子清单。〉
+
+\section{结果文件说明}\label{app:result}
+\noindent〈逐个结果文件说明内容与列序；数据字典（字段、单位、时标约定）；篇幅较大的明细表。〉
+
+\section{关键推导}\label{app:derive}
+\noindent〈正文放不下的推导：对偶平稳性条件逐条、临界分位数推导、关键引理证明等。〉
+
+\end{document}

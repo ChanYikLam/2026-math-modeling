@@ -57,6 +57,12 @@ k 同时是"电价带宽"和"安全边际"的倍数，k=0 时集合退化为单�
 """
 from __future__ import annotations
 
+import os as _os
+import sys as _sys
+
+_sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))  # -> code/
+import _pathsetup  # noqa: E402,F401  子目录引导：把 common/ 与各问目录加入 sys.path
+
 import argparse
 import json
 import os

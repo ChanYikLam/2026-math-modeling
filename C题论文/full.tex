@@ -1,10 +1,10 @@
 %!TEX program = xelatex
 % =============================================================================
-%  full.tex —— 合并版入口：正文（= main.pdf 的全部内容）+ 附录 A--O
+%  full.tex —— 合并版入口：正文（= main.pdf 的全部内容）+ 附录 A--S
 %
 %  三个交付形态共用同一套 sections/：
 %    main.pdf      摘要 + 正文 + 参考文献（正文 ≤30 页，不含源程序）  ← main.tex
-%    appendix.pdf  附录 A--O（独立文件，页数不限，含全部源程序）      ← appendix.tex
+%    appendix.pdf  附录 A--S（独立文件，页数不限，含全部源程序）      ← appendix.tex
 %    full.pdf      正文 + 附录合并版（备用）                          ← 本文件
 %
 %  本文件里正文与附录排在同一文档中，因此附录回指正文的 \bref 直接取真实 \ref
@@ -35,9 +35,9 @@
 \label{pg:bodyend}
 
 % ---- 附录（页数不限，须与正文一起打印装订） --------------------------------
-% \appendixmodetrue 使正文里的 \appref{label}{备用文字} 走真实 \ref，
-% 因此不会出现 ??；main.tex 与本文件都必须打开这个开关。
-\appendixmodetrue
+% \appref 现在统一输出「附录 <手写定位>」（见 preamble.tex §8b），
+% 三个交付形态给出同一个可查定位，因此这里不再需要任何模式开关；
+% 定位文字与实际附录字母的一致性由 tools/check_paper.py 的「附录定位核对」逐条校验。
 \clearpage
 \appendix
 \ctexset{section={name={附录\,},number=\Alph{section},aftername=\quad}}

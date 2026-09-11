@@ -14,6 +14,12 @@
 """
 from __future__ import annotations
 
+import os as _os
+import sys as _sys
+
+_sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))  # -> code/
+import _pathsetup  # noqa: E402,F401  子目录引导：把 common/ 与各问目录加入 sys.path
+
 import argparse
 import json
 import os
@@ -435,6 +441,28 @@ def solve_cvar_day(price_scen, nd_fcst, nd_scen, weights, s_init, lam=0.0,
                 obj=res.fun, z=x[iZ:iZ + K])
 
 
+def weighted_cvar(cost, weights, alpha=0.95):
+    """加权 Rockafellar–Uryasev 形式（与 solve_cvar_day 的 (eta, z) 线性化同口径）：
+
+        CVaR_alpha(C) = eta + 1/(1-alpha) * sum_w w_w * max(0, C_w - eta)
+
+    eta 取加权 alpha 分位（加权经验分布下该泛函的最小化点）。工况 w_omega 是分层
+    medoid 情景集的**层样本占比**（非均匀，约 0.0030–0.0299），因此正部必须用同一组
+    权重加权，不能用 1/|Omega| 的等权平均——否则报告值与优化器目标
+    （c_obj[iZ] = lam*weights/(1-alpha)、c_obj[iEta] = lam）不同口径。
+    返回 (CVaR, eta)。
+    """
+    cost = np.asarray(cost, float)
+    w = np.asarray(weights, float)
+    w = w / w.sum()
+    order = np.argsort(cost, kind="stable")
+    c_s, w_s = cost[order], w[order]
+    cum = np.cumsum(w_s)
+    i = int(np.searchsorted(cum, alpha, side="left"))
+    eta = float(c_s[min(i, len(c_s) - 1)])
+    return float(eta + np.sum(w * np.maximum(cost - eta, 0.0)) / (1.0 - alpha)), eta
+
+
 # --------------------------------------------------------------------------
 # 主程序
 # --------------------------------------------------------------------------
@@ -504,12 +532,14 @@ def main():
 
     if args.mode in ("cvar", "all"):
         scen = build_joint_scenarios(panel, K=args.K, mode=args.scen)
+        w_sc = np.asarray(scen["w"], float); w_sc = w_sc / w_sc.sum()   # 层样本占比，非均匀
         lams = [float(x) for x in args.lams.split(",")]
         sub = list(DATE_WINDOW)[::args.step]
         load = panel.L(); pv_act = panel.PV(); p4 = panel.P(volatile=True)
         res = []
         for lam in lams:
             exp_cost, real_cost, cvar_val, emg = 0.0, 0.0, 0.0, 0.0
+            cvar_eq = 0.0                     # 等权旧口径，仅留作审计对照
             for d in sub:
                 L = load.loc[d].to_numpy(float); PVa = pv_act.loc[d].to_numpy(float)
                 nd_act = (L - PVa) * C.DT
@@ -527,15 +557,22 @@ def main():
                                             + C.EMERGENCY_MULT * g_sc)).sum(1)
                 exp_cost += float(scen["w"] @ sc_cost)
                 real_cost += real; emg += float(g.sum())
-                var = np.quantile(sc_cost, 0.95)
-                cvar_val += float(var + np.mean(np.maximum(sc_cost - var, 0)) / 0.05)
+                # 报告口径：与优化器同权重的加权 (eta, z) 形式
+                cv, _eta = weighted_cvar(sc_cost, w_sc, 0.95)
+                cvar_val += cv
+                var_eq = np.quantile(sc_cost, 0.95)
+                cvar_eq += float(var_eq + np.mean(np.maximum(sc_cost - var_eq, 0)) / 0.05)
             n = len(sub)
             res.append(dict(lam=lam, exp_cost=exp_cost / n, real_cost=real_cost / n,
-                            cvar=cvar_val / n, emg_qty=emg / n))
+                            cvar=cvar_val / n, emg_qty=emg / n,
+                            cvar_equalweight=cvar_eq / n))
             print("  lam=%.1f  期望费用 %.2f  真实回测 %.2f  CVaR95 %.2f  紧急 %.1f kWh/日"
                   % (lam, exp_cost / n, real_cost / n, cvar_val / n, emg / n))
         with open(os.path.join(C.INTERMEDIATE_DIR, "q4_cvar.json"), "w") as f:
-            json.dump(dict(days=[str(pd.Timestamp(x).date()) for x in sub], frontier=res),
+            json.dump(dict(days=[str(pd.Timestamp(x).date()) for x in sub],
+                           frontier=res,
+                           note="cvar = 加权 Rockafellar–Uryasev (eq.25)，权重 = 分层 medoid 情景的层样本占比；"
+                                "cvar_equalweight = 旧等权 1/|Omega| 口径，仅作审计对照"),
                       f, ensure_ascii=False, indent=1)
     return out
 

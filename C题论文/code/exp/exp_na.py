@@ -8,10 +8,20 @@
   说明实现中没有"用未来信息决策"的泄漏（非预期性成立）。
 - 同时给出对照：置换 0:00 预报应使槽 0-35 也变化（证明检验本身有效力）。
 
-输出 intermediate/exp_na.json
+口径：K = 60 场景（与论文主口径 run_all.py 的 --K 60 一致），仅置换一次预报、其余不变；
+      对照 seed=1（置换用 numpy.random.default_rng(seed=1)）。
+输出 intermediate/exp_na.json（默认；可用 --out 改文件名，例如 --K 40 --out exp_na_K40.json）
+用法：python3 exp_na.py [--K 60] [--out exp_na.json]
 """
 from __future__ import annotations
 
+import os as _os
+import sys as _sys
+
+_sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))  # -> code/
+import _pathsetup  # noqa: E402,F401  子目录引导：把 common/ 与各问目录加入 sys.path
+
+import argparse
 import json
 import os
 
@@ -27,8 +37,11 @@ EPOCHS = (0, 6, 12, 18)
 CONTROL = {0: (0, 36), 6: (36, 72), 12: (72, 108), 18: (108, 144)}
 
 
-def run_days(permuted_hour=None, seed=0, K=40):
-    """运行 12 天；permuted_hour 不为 None 时，把该时刻的预报按日随机置换。"""
+def run_days(permuted_hour=None, seed=0, K=60):
+    """运行 12 天；permuted_hour 不为 None 时，把该时刻的预报按日随机置换。
+
+    K 为各预报时刻残差场景集的场景数，默认 60 = 论文主口径（run_all.py --K 60）。
+    """
     panel = C.Panel(pd.date_range(C.WARMUP_START, C.WIN_END, freq="D"))
     load = panel.L(); pv_act = panel.PV()
     price = C.read_attachment1()["price"].to_numpy(float)
@@ -68,16 +81,21 @@ def run_days(permuted_hour=None, seed=0, K=40):
 
 
 def main():
-    base = run_days(None)
-    out = {"baseline_days": len(base)}
+    ap = argparse.ArgumentParser(description="非预期性置换检验（默认 K=60，与论文主口径一致）")
+    ap.add_argument("--K", type=int, default=60,
+                    help="各预报时刻残差场景集的场景数，默认 60（论文主口径）；对照可用 40/120")
+    ap.add_argument("--out", default="exp_na.json", help="输出文件名（位于 intermediate/）")
+    args = ap.parse_args()
+    base = run_days(None, K=args.K)
+    out = {"baseline_days": len(base), "K": args.K}
     for h in EPOCHS:
-        alt = run_days(permuted_hour=h, seed=1)
+        alt = run_days(permuted_hour=h, seed=1, K=args.K)
         diffs = {}
         for m, (a, b) in CONTROL.items():
             dmax = max(float(np.max(np.abs(alt[d][a:b] - base[d][a:b]))) for d in DAYS)
             diffs[f"槽{a}-{b}"] = dmax
         out[f"置换{h:02d}:00预报"] = diffs
-    with open(os.path.join(C.INTERMEDIATE_DIR, "exp_na.json"), "w") as f:
+    with open(os.path.join(C.INTERMEDIATE_DIR, args.out), "w") as f:
         json.dump(out, f, ensure_ascii=False, indent=1)
     print(json.dumps(out, ensure_ascii=False, indent=1))
     print()

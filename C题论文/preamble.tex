@@ -215,20 +215,20 @@
 \usepackage{environ}
 
 % ---------------------------------------------------------------------------
-% 8b. 附录引用：\appref{label}{附录字母}
-%     正文有一批引用指向附录（口径定义、对照实验明细、明细表等）。
-%     main.pdf 与 full.pdf 都必须能编过，且\textbf{不得出现 ??}：
-%       - \ifappendixmode 为真   （full.tex / main.tex 已 \input 附录）
-%             -> 走真实 \ref，自动取到附录字母
-%       - \ifappendixmode 为假   （只编正文的单文件交付物）
-%             -> 原样输出备用文字（如「附录 H」），不产生未定义引用
+% 8b. 附录引用：\appref{label}{附录定位（实际字母/小节号 + 名称）}
+%     三个交付形态（main.pdf 正文册 / appendix.pdf 附录册 / full.pdf 合并册）
+%     必须给出**同一个**可查的定位，因此不再依赖 \ref 的自动取值——合并册里
+%     附录靠后时，自动取值会退化成裸编号（如「见 7.1」），而正文册里则退化成
+%     另一串备用文字，两者对不上正是"跳号附录"的来源。
+%     现在统一输出「附录 <#2>」，其中 #2 必须写成实际附录字母（含小节号）：
+%       附录 A 支撑材料文件清单 … D 独立审计报告 … F 数据字典（F.1/F.2/F.3）
+%       G 对照实验明细（G.1--G.4） H 口径定义汇总 … K 验证与灵敏度明细
+%       （K.1 非预期性置换/K.2 电价过程检验/K.3 灵敏度完整档位/K.4 容量与功率
+%        扫描/K.5 L 形分解） … R 伪验证自查清单
+%     该字母由 tools/check_paper.py 的「附录定位核对」逐条校验，防止再次漂移。
 %     维护约定：正文引用附录一律用 \appref，禁止直接 \ref{附录内的标签}。
 % ---------------------------------------------------------------------------
-\newif\ifappendixmode
-\appendixmodefalse
-\newcommand{\appref}[2]{%
-  \ifappendixmode\ref{#1}%
-  \else #2\fi}
+\newcommand{\appref}[2]{附录~#2}
 
 
 % 带圈数字（①②③…）、罗马数字等符号在默认字体分类下会被交给西文字体而缺字，
@@ -258,7 +258,7 @@
   \else{\color{cPh}\bfseries 【#1】}\fi}
 
 % 证据编号（证据账本 C-Qn-xx）
-\newcommand{\evid}[1]{\ifdraft{\color{cEvid}(#1)}\else（见 #1）\fi}
+\newcommand{\evid}[1]{\ifdraft{\color{cEvid}(#1)}\else（证据账本 #1）\fi}
 
 % 口径编号（口径框 C-01…C-08）
 \newcommand{\calref}[1]{口径 #1}
@@ -284,7 +284,7 @@
     {\includegraphics[#1]{figures/#2}}%
     {\fbox{\begin{minipage}[c][2.6cm][c]{0.9\linewidth}\centering\color{cPh}\small
       【缺图】\texttt{\detokenize{figures/#2}}\par\vspace{0.6ex}
-      待由 \texttt{C题代码/code/plot\_fig*.py} 生成后放入 \texttt{figures/}\end{minipage}}}%
+      待由 \texttt{code/plot/plot\_figures.py} 生成后放入 \texttt{figures/}\end{minipage}}}%
 }
 
 % 附录源程序：自动原样引入 code/ 目录下的真实文件，

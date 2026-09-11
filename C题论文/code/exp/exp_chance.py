@@ -39,15 +39,22 @@ c_t / d_t 为充/放电量，故 E_t - c_t + d_t 是"计划口径的可用供给
 单槽报童模型的临界分位数 F*(m) = c_u / (c_u + c_o)，最优允许缺货概率 = 1 - F* = c_o/(c_u+c_o)。
   c_u = 4 p_t（紧急购电 5p_t 中本应付的 p_t 已计入计划费，溢价 4p_t）；
   c_o = p_t（多买即弃：超购部分只能弃置）-> 允许缺货概率恒为 1/5 = 0.20；
-  c_o ~ 0.37 元/kWh（超购电量可转存电池、在后续低价时段避免高价购电的"残值"）-> 约 0.10。
-本脚本把这两个（以及第三种 c_o = p_t - p_min 的口径）理论值与 beta 扫描的**实测缺电频率**
-画在同一张对照表里写入 JSON。
+  c_o = p̄ - p_min ≈ 0.3949 元/kWh（超购电量可转存电池、按最低可替代购电价回收）
+      -> 用均价 p̄ = 0.7662 代入约 0.114。
+本脚本把这两种主口径（以及逐槽 c_o = p_t - p_min 的旁证）理论值与 beta 扫描的
+**实测缺电频率**画在同一张对照表里写入 JSON。
 
 输出：intermediate/exp_chance.json
 
 运行：cd C题论文/code && python3 exp_chance.py            （约 1-2 分钟）
 """
 from __future__ import annotations
+
+import os as _os
+import sys as _sys
+
+_sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))  # -> code/
+import _pathsetup  # noqa: E402,F401  子目录引导：把 common/ 与各问目录加入 sys.path
 
 import argparse
 import json
@@ -65,8 +72,8 @@ import q2 as Q2
 
 BETAS = [0.01, 0.05, 0.10, 0.20, 0.30, 0.50]
 K_MAIN = 60                     # 与问题 2 主方案一致的情景数（分层削减）
-P_MIN_A1 = 0.3713               # 附件 1 电价最小值（元/kWh），第三口径 c_o 用
-CO_REF = 0.37                   # 交底书 §2.5 的 c_o 参考值（元/kWh）
+P_MIN_A1 = 0.3713               # 附件 1 电价最小值（元/kWh）
+CO_REF = 0.3949                 # 可回收口径：c_o = 均价 - p_min ≈ 0.7662 - 0.3713
 TOL_SHORT = 1e-6                # 判定"该槽缺电"的阈值（kWh）
 ALPHA = 0.95                    # CVaR 置信水平（C-11）
 
@@ -201,11 +208,16 @@ def attach_demand_stats(recs, days):
 # 报童理论临界分位数
 # --------------------------------------------------------------------------
 def newsboy(price):
-    """三种 c_o 口径下的理论最优允许缺货概率 = c_o / (c_u + c_o)，c_u = 4 p_t。"""
+    """两种主口径 + 一种逐槽旁证：理论最优允许缺货概率 = c_o / (c_u + c_o)，c_u = 4 p_t。
+
+    主口径一：多买即弃，c_o = p_t；
+    主口径二：可回收，c_o = p̄ - p_min（用逐槽残值的期望回收价值近似）；
+    旁证：c_o = p_t - p_min（逐槽可回收），用于检查 Jensen 效应。
+    """
     cu = 4.0 * price
-    coA = price.copy()                    # 多买即弃
-    coB = np.full_like(price, CO_REF)     # 残值 0.37 元/kWh
-    coC = np.maximum(price - P_MIN_A1, 0.0)   # 相对最低价的机会成本
+    coA = price.copy()                          # 多买即弃
+    coB = np.full_like(price, CO_REF)           # 可回收：p̄ - p_min
+    coC = np.maximum(price - P_MIN_A1, 0.0)     # 逐槽可回收
     pbar = float(price.mean())
     def stat(co):
         b = co / (cu + co)
@@ -222,10 +234,10 @@ def newsboy(price):
             dict(name="c_o = p_t（多买即弃）", c_o="p_t", beta_star=bA,
                  beta_star_scalar=0.2, critical_fractile=0.8,
                  note="恒等于 1/5，与 p 无关"),
-            dict(name="c_o = 0.37 元/kWh（交底书 §2.5 残值口径）",
-                 c_o=f"{CO_REF}", beta_star=bB, note="逐槽值，随 p_t 变化"),
-            dict(name=f"c_o = p_t - p_min（p_min = {P_MIN_A1} 元/kWh）",
-                 c_o="p_t - p_min", beta_star=bC, note="最低价时段机会成本为 0"),
+            dict(name=f"c_o = p̄ - p_min = {CO_REF} 元/kWh（可回收口径）",
+                 c_o=f"{CO_REF}", beta_star=bB, note="标量近似，随均价与最低价确定"),
+            dict(name=f"c_o = p_t - p_min（逐槽可回收，p_min = {P_MIN_A1} 元/kWh）",
+                 c_o="p_t - p_min", beta_star=bC, note="逐槽值，最低价时段机会成本为 0"),
         ])
 
 
@@ -326,8 +338,8 @@ def main():
     nb["measured"] = measured
     best = min(chance, key=lambda s: s["tot_cost"])
     nb["conclusion"] = (
-        "报童临界值给出两条理论界：最优允许缺货概率 = 1/5 = 0.2000（c_o = p_t，多买即弃）"
-        f"与 {nb['calibers'][1]['beta_star']['at_mean_price']:.4f}（c_o = 0.37 元/kWh，用均价 "
+        "报童临界值给出两条方向性参照：最优允许缺货概率 = 1/5 = 0.2000（c_o = p_t，多买即弃）"
+        f"与 {nb['calibers'][1]['beta_star']['at_mean_price']:.4f}（c_o = p̄ - p_min = {CO_REF} 元/kWh，用均价 "
         f"{nb['p_mean']:.4f} 元/kWh 代入；逐槽算术均值 {nb['calibers'][1]['beta_star']['mean']:.4f}，"
         "两者之差来自 beta*(p) 的凸性/Jensen）。实测逐槽缺电频率随 beta 单调上升且始终低于 beta，"
         "说明分位数确定性等价在储能可跨时段对冲时是保守的。")
@@ -386,8 +398,8 @@ def main():
             best_rel_cost_vs_sp=best.get("rel_cost_vs_sp"),
             sp_shortfall_freq=(ref["shortfall_slot_freq"] if ref is not None else None),
             newsboy_beta_star_co_eq_p=0.2,
-            newsboy_beta_star_co_037_at_mean_price=nb["calibers"][1]["beta_star"]["at_mean_price"],
-            newsboy_beta_star_co_037_slot_mean=nb["calibers"][1]["beta_star"]["mean"],
+            newsboy_beta_star_co_recover_at_mean_price=nb["calibers"][1]["beta_star"]["at_mean_price"],
+            newsboy_beta_star_co_recover_slot_mean=nb["calibers"][1]["beta_star"]["mean"],
             freq_by_beta={str(s["beta"]): s["shortfall_slot_freq"] for s in chance},
             cost_by_beta={str(s["beta"]): s["tot_cost"] for s in chance},
         ),
@@ -415,9 +427,9 @@ def main():
     best = min(chance, key=lambda s: s["tot_cost"])
     print(f"机会约束最优 beta={best['beta']}         {best['tot_cost']:,.2f} 元  "
           f"节省率 {best['saving_rate']*100:.2f}%  缺电频率 {best['shortfall_slot_freq']*100:.2f}%")
-    print(f"报童理论允许缺货概率：c_o=p_t -> 20.00% ；c_o=0.37 -> "
-          f"{nb['calibers'][1]['beta_star']['mean']*100:.2f}%（逐槽均值）；"
-          f"c_o=p_t-p_min -> {nb['calibers'][2]['beta_star']['mean']*100:.2f}%")
+    print(f"报童理论允许缺货概率：c_o=p_t -> 20.00% ；c_o=p̄-p_min -> "
+          f"{nb['calibers'][1]['beta_star']['at_mean_price']*100:.2f}%（用均价代入）；"
+          f"逐槽 c_o=p_t-p_min -> {nb['calibers'][2]['beta_star']['mean']*100:.2f}%")
     print("已写出", path, f"（总耗时 {time.time()-t_start:.1f}s）")
     return out
 

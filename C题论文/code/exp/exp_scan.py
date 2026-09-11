@@ -5,6 +5,12 @@
 """
 from __future__ import annotations
 
+import os as _os
+import sys as _sys
+
+_sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))  # -> code/
+import _pathsetup  # noqa: E402,F401  子目录引导：把 common/ 与各问目录加入 sys.path
+
 import json
 import os
 
@@ -19,11 +25,23 @@ import q2 as Q2
 
 
 def q1_with(cap=None, pmax=None, eta_c=C.ETA_C, eta_d=C.ETA_D,
-            s_min=None, s_max=None, s_init=C.S_INIT):
-    """在给定储能参数下重解 Q1（用于容量/功率/效率扫描）。"""
+            s_min=None, s_max=None, s_init=C.S_INIT,
+            price=None, load=None, pv=None):
+    """在给定储能参数下重解 Q1（用于容量/功率/效率扫描）。
+
+    price/load/pv 默认取附件 1；传入自定义数组时用于 Sobol 等全局灵敏度实验，
+    否则改参数只会进入基线与目标的外围计算，形成口径错配。
+    """
     a1 = C.read_attachment1()
-    price = a1["price"].to_numpy(float); load = a1["load"].to_numpy(float)
-    pv = a1["pv"].to_numpy(float)
+    if price is None:
+        price = a1["price"].to_numpy(float)
+    if load is None:
+        load = a1["load"].to_numpy(float)
+    if pv is None:
+        pv = a1["pv"].to_numpy(float)
+    price = np.asarray(price, float).copy()
+    load = np.asarray(load, float).copy()
+    pv = np.asarray(pv, float).copy()
     n = C.N_SLOT
     e_max = (pmax * C.DT) if pmax is not None else C.E_MAX
     smin = C.S_MIN if s_min is None else s_min

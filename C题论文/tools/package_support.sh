@@ -3,7 +3,7 @@
 #  package_support.sh —— 生成支撑材料压缩包 support.zip
 #  用法：./tools/package_support.sh
 #  内容：main.tex/appendix.tex/full.tex/preamble.tex/build.sh、sections/ 全部 tex、tools/ 全部自查脚本、
-#        code/ 全部源程序（27 个文件：26 个 .py + requirements.txt，含 common/ q1--q4/ exp/ plot/ 子目录）、
+#        code/ 全部源程序（28 个文件：27 个 .py + requirements.txt，含 common/ q1--q4/ exp/ plot/ 子目录）、
 #        results/ 五个结果文件、figures/ 全部图（含 v2 新增 5 张）、
 #        intermediate/ 的汇总与审计类结果、notes/ 数值台账与交底书、README.md
 #  不含：逐日解转储的大体积 JSON（run_all.py 可重建，附录 A 已声明）
@@ -32,8 +32,8 @@ cp tools/check_paper.py tools/check_numbers.py tools/verify_ref.py \
 
 # 中间结果：只带汇总与审计类（逐日解转储体积大，run_all.py 可重建）
 for f in audit.json audit_report.md paper_numbers.json exp_scan.json exp_sobol.json \
-         exp_na.json exp_benchmark.json q4_cvar.json q4_price.json window_aggregates.json \
-         exp_oos.json q2_margin.json q1_dual2.json results_summary.json \
+         exp_na.json exp_benchmark.json q4_cvar.json q4_price.json \
+         exp_oos.json q1_dual2.json results_summary.json \
          exp_copula.json exp_chance.json exp_dro.json decomp.json exp_loaderr.json \
          exp_pricecond.json; do
   [ -f "intermediate/$f" ] && cp "intermediate/$f" "$STAGE/intermediate/" || true

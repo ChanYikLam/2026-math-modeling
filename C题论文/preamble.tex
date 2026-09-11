@@ -153,9 +153,10 @@
 \definecolor{cString} {RGB}{170,60,0}
 \definecolor{cGray}   {RGB}{120,120,120}
 \lstset{
-  basicstyle       = \ttfamily\footnotesize\songti,
+  % 数学符号字体 \codefont 见下方第 6b 节（STIXGeneral 等宽且覆盖 ≈ ≤ ≥ ∈ σ λ κ π ⇒）
+  basicstyle       = \codefont\footnotesize\songti,
   keywordstyle     = \color{cKeyword}\bfseries,
-  commentstyle     = \color{cComment}\itshape,
+  commentstyle     = \color{cComment},
   stringstyle      = \color{cString},
   numberstyle      = \tiny\color{cGray},
   numbers          = left,
@@ -176,6 +177,36 @@
 }
 \lstdefinestyle{py}{language=Python}
 \lstdefinestyle{plain}{language=}
+
+% 附录代码区的字体（印刷版可读性修正）
+% 背景：正文/附录的中日韩文字走 Songti SC，但该字体不含 ≈ ≤ ≥ ∈ σ λ κ π ⇒ ①②③
+% 等符号（实测 42 处落成替代字符，PDF 复制即失真）。这里为**代码清单**单独指定一套
+% 覆盖这些符号的**真等宽**字体；中日韩文字仍由 xeCJK 的 \CJKmonofont 接管，
+% 因此对正文版式零影响，只改附录代码区的字形。
+% 候选按等宽+符号覆盖排序（实测本机 SF Mono 覆盖全部 20 个待测字符，0 缺失）：
+%   .SF NS Mono（macOS 10.11+）→ Menlo（含希腊与基本数学符号）→ DejaVu Sans Mono（Linux）
+% 兜底 STIXGeneral 虽覆盖全部符号但不是等宽字体，排在最后，仅用于避免缺字。
+\IfFontExistsTF{.SF NS Mono}{%
+  \newfontfamily\codefont{.SF NS Mono}[Scale=0.9]%
+}{%
+  \IfFontExistsTF{Menlo}{%
+    \newfontfamily\codefont{Menlo}[Scale=0.92]%
+  }{%
+    \IfFontExistsTF{DejaVu Sans Mono}{%
+      \newfontfamily\codefont{DejaVu Sans Mono}[Scale=0.92]%
+    }{%
+      \IfFontExistsTF{STIXGeneral}{%
+        \newfontfamily\codefont{STIXGeneral}[Scale=0.95]%
+      }{\newcommand{\codefont}{}}%
+    }%
+  }%
+}
+% 折行必须显式标出（附录印刷版要求"可读性优先"）：行尾 →、续行行首 →，
+% 避免读者把 listings 的软折行误当成真实换行后复制执行。
+% 记号选 \rightarrow 而非 \hookrightarrow：后者在正文数学字体里与逗号+箭头同形，
+% 复制 PDF 时会得到 ",→" 这类噪声。
+\lstset{prebreak=\mbox{\scriptsize$\rightarrow$},
+        postbreak=\mbox{$\rightarrow$\space}}
 
 % ---------------------------------------------------------------------------
 % 7. 超链接与 PDF 元数据（第六条：元数据不得含身份信息）

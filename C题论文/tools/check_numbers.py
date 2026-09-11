@@ -6,13 +6,30 @@ check_numbers.py —— 论文数字与数值台账的对拍（数字纪律 D1 �
 列出论文 sections/*.tex 中出现、但在 intermediate/paper_numbers.json（数值台账）
 里找不到对应来源的"大数"（≥3 位有效数字、且不是年份/日期/章节号/常见常数），供人工核对。
 
-用法：python3 tools/check_numbers.py
+用法：
+    python3 tools/check_numbers.py            # 宽松匹配（默认，容差 rtol=5e-4）
+    python3 tools/check_numbers.py --strict   # 主结果类改严：rtol=2e-5，超差项单独列出
+    python3 tools/check_numbers.py --json     # 机器可读输出（供 check_paper.py 调用）
+
+口径说明
+--------
+宽松口径的容差 max(1e-4, 5e-4·|v|) 对千万级数字意味着约 ±7 000 元——早期版本因此让
+Q3 的 28.78 元口径漂移（相对 2.1e-6）轻松通过。现在两层并存：
+  * 宽松口径仍用于"有没有出处"的粗筛（历史行为，便于对照）；
+  * `--strict` 把相对容差压到 2e-5（千万级约 ±280 元），超差项单独归类为 strict_fail，
+    供修订前扫尾；主结果类数字必须至少通过严格口径。
+抽取规则（消除历史伪阳性）
+  * 先做 LaTeX 归一：`\\,`、`{,}`、`~`、空白、千分位逗号在**同一个数字内部**一律视为空；
+  * 若候选数字两侧仍紧邻数字（如 `0.0259` 抽成 `0259`、`1200,10800` 抽成 `120010800`），
+    判为抽取碎片并丢弃；
+  * 单位/百分号不参与匹配，但按原样打印，便于人工定位。
 """
 from __future__ import annotations
 
+import argparse
 import json
-import os
 import re
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -43,7 +60,8 @@ def flatten(obj, out):
 
 
 def norm(s: str):
-    s = s.replace("\\,", "").replace("{,}", "").replace(" ", "").replace("~", "")
+    """LaTeX 数字 -> float；数字内部的 \\, / {,} / ~ / 空格 / 千分位逗号一律去掉。"""
+    s = s.replace("\\,", "").replace("{,}", "").replace("~", "").replace(" ", "")
     s = s.replace(",", "")
     try:
         return float(s)
@@ -51,53 +69,102 @@ def norm(s: str):
         return None
 
 
-def main():
-    led = json.load(open(LEDGER))
-    vals = set()
+def normalise_tex(body: str) -> str:
+    """归一 LaTeX 数字写法，消除"列表被当成一个数"的抽取伪阳性。
+
+    `12\\,000` / `1{,}234` / `3 000`（千分位组）-> `12000` / `1234` / `3000`；
+    `[0.114,\\,0.200]`（小数列表）-> 保留分隔，抽成 0.114 与 0.200 两个数；
+    `[1200,10\\,800]`（整数列表，其中一项带千分位）-> `1200 10800`。
+    判定依据：只有当"分隔符 + 恰好 3 位数字"后面不再是数字时，才按千分位并入同一个数。
+    """
+    s = body
+    for _ in range(3):                                    # 处理 `3\,000\,000` 这类多级千分位
+        s = re.sub(r"(?<=\d)(?:\\,|\{~\}|~|\s|\{,|,)(\d{3})(?![\d])", r"\1", s)
+    s = s.replace("\\,", " ").replace("{,}", ",").replace("~", " ").replace(",", " ")
+    return s
+
+
+def strip_latex(line: str) -> str:
+    return re.sub(r"\\(?:label|ref|eqref|bref|chapref|appref|cite|evid|calref)\{[^}]*\}", "", line)
+
+
+def candidates(body: str):
+    """产出 (raw, value)；跳过常见常数与抽取碎片。"""
+    for m in re.finditer(r"\d+(?:\.\d+)?", normalise_tex(body)):
+        raw = m.group(0)
+        x = norm(raw)
+        if x is None or x < 20:                  # 只看 ≥20 的数字
+            continue
+        if WHITELIST_RE.match(raw):
+            continue
+        if str(m.group(0)).startswith("0") and len(str(m.group(0)).split(".")[0]) >= 2:
+            continue                             # 抽取碎片（如 0.0259 被切出 0259）
+        yield raw, x
+
+
+def build_ledger():
+    led = json.load(open(LEDGER, encoding="utf-8"))
+    vals: set = set()
     flatten(led, vals)
-    # 补充派生量：万、百分比、比例
     extra = set()
     for v in list(vals):
-        extra.add(v / 1e4)
-        extra.add(v * 100)
+        extra.add(v / 1e4)                       # 万元
+        extra.add(v * 100)                       # 比例 -> 百分数
         if v != 0:
             extra.add(1 / v)
     vals |= extra
     vals |= {round(v, 2) for v in list(vals)}
+    return vals
 
-    def known(x: float) -> bool:
-        if abs(x) < 1e-9:
-            return True
-        for v in vals:
-            if abs(v - x) <= max(1e-4, abs(v) * 5e-4):
-                return True
-        return False
 
-    suspicious = []
+def known(x: float, vals, rtol: float, atol: float) -> bool:
+    if abs(x) < 1e-9:
+        return True
+    return any(abs(v - x) <= max(atol, abs(v) * rtol) for v in vals)
+
+
+def scan(vals, rtol: float, atol: float):
+    out = []
     for f in sorted(SECTIONS.glob("*.tex")):
-        text = f.read_text(encoding="utf-8")
-        lines = text.splitlines()
-        for i, line in enumerate(lines, 1):
+        for i, line in enumerate(f.read_text(encoding="utf-8").splitlines(), 1):
             if line.lstrip().startswith("%"):
                 continue
-            body = re.sub(r"\\label\{[^}]*\}", "", line)
-            body = re.sub(r"\\ref\{[^}]*\}", "", body)
-            body = re.sub(r"\\cite\{[^}]*\}", "", body)
-            for m in re.finditer(r"\d[\d\\,\{\}~ ]*\d(?:\.\d+)?", body):
-                raw = m.group(0)
-                x = norm(raw)
-                if x is None or x < 20:            # 只看 ≥20 的数字
-                    continue
-                if WHITELIST_RE.match(raw.replace(" ", "")):
-                    continue
-                if not known(x):
-                    suspicious.append((str(f.relative_to(ROOT)), i, raw.strip(), x))
+            for raw, x in candidates(strip_latex(line)):
+                if not known(x, vals, rtol, atol):
+                    out.append((str(f.relative_to(ROOT)), i, raw, x))
+    return out
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(description="论文数字 vs 数值台账对拍")
+    ap.add_argument("--strict", action="store_true",
+                    help="主结果类改严：rtol=2e-5、atol=0.05（千万级约 ±280 元）")
+    ap.add_argument("--json", action="store_true", help="以 JSON 输出（机器可读）")
+    args = ap.parse_args(argv)
+
+    vals = build_ledger()
+    loose = scan(vals, rtol=5e-4, atol=1e-4)
+    strict = scan(vals, rtol=2e-5, atol=0.05) if args.strict else []
+    strict_only = [t for t in strict if t not in loose]
+
+    if args.json:
+        print(json.dumps(dict(
+            ledger_size=len(vals), loose=len(loose), strict=len(strict),
+            strict_fail=[dict(file=f, line=i, raw=r, value=v) for f, i, r, v in strict_only],
+        ), ensure_ascii=False, indent=1))
+        return 0
+
     print(f"台账数字条目：{len(vals)}")
-    print(f"疑似无出处的数字：{len(suspicious)} 处")
-    for f, i, raw, x in suspicious[:200]:
+    print(f"疑似无出处的数字：{len(loose)} 处（宽松口径 rtol=5e-4）")
+    for f, i, raw, x in loose[:200]:
         print(f"  {f}:{i}  「{raw}」 -> {x}")
-    return suspicious
+    if args.strict:
+        print(f"严格口径（rtol=2e-5）另有 {len(strict_only)} 处超差：")
+        for f, i, raw, x in strict_only[:200]:
+            print(f"  {f}:{i}  「{raw}」 -> {x}")
+        print("判定：严格口径超差项须逐条核对——主结果类数字不得依赖 5e-4 的宽容量级。")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

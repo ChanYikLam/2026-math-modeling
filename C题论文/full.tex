@@ -1,0 +1,46 @@
+%!TEX program = xelatex
+% =============================================================================
+%  full.tex —— 合并版入口：正文（= main.pdf 的全部内容）+ 附录 A--O
+%
+%  三个交付形态共用同一套 sections/：
+%    main.pdf      摘要 + 正文 + 参考文献（正文 ≤30 页，不含源程序）  ← main.tex
+%    appendix.pdf  附录 A--O（独立文件，页数不限，含全部源程序）      ← appendix.tex
+%    full.pdf      正文 + 附录合并版（备用）                          ← 本文件
+%
+%  本文件里正文与附录排在同一文档中，因此附录回指正文的 \bref 直接取真实 \ref
+%  （preamble.tex §8c 的默认实现），不需要 xr 外部引用。
+%
+%  编译：tectonic -X compile full.tex --outdir build   （或 xelatex full.tex 连编两遍）
+% =============================================================================
+\documentclass[10pt,a4paper]{ctexart}
+\input{preamble}
+
+\begin{document}
+
+\input{sections/00_abstract}
+
+\input{sections/01_problem}
+\input{sections/02_assumptions}
+\input{sections/03_data}
+\input{sections/04_q1}
+\input{sections/05_q2}
+\input{sections/06_q3}
+\input{sections/07_q4}
+\input{sections/08_results}
+\input{sections/09_validation}
+\input{sections/10_evaluation}
+
+\input{sections/refs}
+
+\label{pg:bodyend}
+
+% ---- 附录（页数不限，须与正文一起打印装订） --------------------------------
+% \appendixmodetrue 使正文里的 \appref{label}{备用文字} 走真实 \ref，
+% 因此不会出现 ??；main.tex 与本文件都必须打开这个开关。
+\appendixmodetrue
+\clearpage
+\appendix
+\ctexset{section={name={附录\,},number=\Alph{section},aftername=\quad}}
+\input{sections/90_appendix}
+
+\end{document}

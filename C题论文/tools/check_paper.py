@@ -28,6 +28,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 SECTIONS = ROOT / "sections"
 PDF = ROOT / "main.pdf"
+PDF_APPENDIX = ROOT / "appendix.pdf"
+PDF_FULL = ROOT / "full.pdf"
 AUX = ROOT / "build" / "main.aux"
 
 ERRORS: list[str] = []
@@ -303,20 +305,223 @@ def check_pdf(strict: bool) -> None:
                     )
             else:
                 mode = "定稿模式" if final_mode else "写作期（草稿）模式"
-                ok(f"正文共 {body_pages} 页（上限 30 页），附录自第 {last_body + 1} 页起（当前为{mode}）")
+                ok(f"正文共 {body_pages} 页（上限 30 页）；与附录合订时附录自第 {last_body + 1} 页起（当前为{mode}）")
         else:
             warn("未在 build/main.aux 中找到 pg:bodyend 标签，无法自动核算正文页数，请人工核对")
     else:
         warn("未找到 build/main.aux，无法自动核算正文页数；请用 --keep-intermediates 编译一次")
 
     if pages:
-        print(f"\n  [参考] PDF 总页数 {pages}：摘要 1 页 + 正文 + 参考文献 + 附录（附录页数不限）")
+        print(f"\n  [参考] main.pdf 共 {pages} 页：摘要 1 页 + 正文 + 参考文献（附录另册，页数不限）")
+
+
+# ---------------------------------------------------------------------------
+# 检查 7b：三个交付物（main / appendix / full）齐备且都不含 ??
+#   交付形态（用户指定）：
+#     main.pdf      摘要页 + 正文 + 参考文献（正文 ≤30 页，不含任何源程序）
+#     appendix.pdf  附录 A--O（独立文件，页数不限，含全部源程序，需与正文一起装订）
+#     full.pdf      正文 + 附录合并版（备用）
+#   附录里有 39 处回指正文的引用，靠 appendix.tex 里的 xr 读 build/main.aux 解析；
+#   因此编译顺序必须是 main -> appendix。此检查同时守住"附录不能有 ?? 或标签名裸露"。
+# ---------------------------------------------------------------------------
+def check_deliverables() -> None:
+    if not shutil_which("pdfinfo") or not shutil_which("pdftotext"):
+        return
+    for path, label, expect_appendix in [
+        (PDF, "main.pdf（正文，≤30 页、不含源程序）", False),
+        (PDF_APPENDIX, "appendix.pdf（附录，含全部源程序）", True),
+        (PDF_FULL, "full.pdf（正文 + 附录合并版，备用）", True),
+    ]:
+        if not path.exists():
+            warn(f"未生成 {path.name}（{label}），请运行 ./build.sh")
+            continue
+        info = subprocess.run(["pdfinfo", str(path)], capture_output=True, text=True).stdout
+        m = re.search(r"Pages:\s+(\d+)", info)
+        npages = int(m.group(1)) if m else 0
+        size_mb = path.stat().st_size / 1024 / 1024
+        txt = subprocess.run(["pdftotext", str(path), "-"], capture_output=True, text=True).stdout
+        bad = txt.count("??")
+        head = txt.strip().split("\n")[0][:40] if txt.strip() else ""
+        if bad:
+            err(f"{path.name} 中有 {bad} 处「??」（未定义引用）")
+        elif size_mb > 20:
+            err(f"{path.name} 共 {size_mb:.1f} MB，超过 20 MB 上限")
+        else:
+            ok(f"{path.name}：{npages} 页、{size_mb:.1f} MB、无「??」（{label}）")
+        # 正文那册不得出现源程序与附录标志（"正文不含代码"是格式规范的硬要求）
+        # pdftotext 会在标题处断行，故比较前先去掉空白
+        flat = re.sub(r"\s+", "", txt)
+        if not expect_appendix:
+            for marker in ("源程序：code/", "附录A", "支撑材料文件清单"):
+                if marker.replace(" ", "") in flat:
+                    err(f"{path.name} 中出现了「{marker}」，正文那册不得含附录/源程序")
+        else:
+            if "附录A支撑材料文件清单" not in flat:
+                err(f"{path.name} 未检出附录起始（附录A 支撑材料文件清单），"
+                    f"请确认已 \\input{{sections/90_appendix}}")
 
 
 def shutil_which(cmd: str):
     from shutil import which
 
     return which(cmd)
+
+
+# ---------------------------------------------------------------------------
+# 检查 8：交叉引用完整性（本次新增）
+#   事故背景：正文有一批 \ref 指向只在附录中定义的标签。此前 main.tex 不引入附录，
+#   于是这些引用在 main.pdf 里全部渲染成「??」，而当时的 check_paper.py 没有任何
+#   未定义引用检查（只查占位符/禁令词/身份/目录/插图/代码/PDF 结构），
+#   所以 README 写着"未定义引用 0"却与实测不符。
+#   三道防线：
+#     ① 源码层：正文的每一个 \ref 目标都必须能在"正文 ∪ 附录"里找到；
+#     ② 源码层：指向附录的引用必须用 \appref{label}{备用文字}，不得裸 \ref；
+#     ③ 产物层：main.pdf 里出现「??」即失败。
+# ---------------------------------------------------------------------------
+def check_refs() -> None:
+    body_files = [p for p in sorted(SECTIONS.glob("*.tex"))
+                  if not p.name.startswith("90_")]
+    app_files = sorted(SECTIONS.glob("90_*.tex"))
+
+    def labels(paths) -> set[str]:
+        found: set[str] = set()
+        for p in paths:
+            found |= set(re.findall(r"\\label\{([^}]+)\}", strip_comments(p.read_text(encoding="utf-8"))))
+        return found
+
+    body_labels = labels(body_files)
+    app_labels = labels(app_files)
+
+    # ① 正文里裸 \ref 的目标必须落在正文自身
+    undefined = []
+    for p in body_files:
+        text = strip_comments(p.read_text(encoding="utf-8"))
+        for m in re.finditer(r"\\ref\{([^}]+)\}", text):
+            if m.group(1) not in body_labels:
+                line = text[:m.start()].count("\n") + 1
+                undefined.append(f"{p.name}:{line} \\ref{{{m.group(1)}}}")
+    if undefined:
+        err("正文存在未定义引用（会渲染成 ??，必须修）：\n      " + "\n      ".join(undefined))
+    else:
+        ok(f"交叉引用：正文 {len(body_labels)} 个标签、全部 \\ref 目标均可解析")
+
+    # ② 指向附录的引用必须走 \appref
+    bare_app = []
+    for p in body_files:
+        text = strip_comments(p.read_text(encoding="utf-8"))
+        for m in re.finditer(r"\\ref\{([^}]+)\}", text):
+            if m.group(1) in app_labels:
+                line = text[:m.start()].count("\n") + 1
+                bare_app.append(f"{p.name}:{line} \\ref{{{m.group(1)}}}")
+    if bare_app:
+        err(
+            "以下引用指向附录标签却用了裸 \\ref（appendix 未载入时会变成 ??）：\n      "
+            + "\n      ".join(bare_app)
+            + "\n      请改为 \\appref{label}{备用文字}"
+        )
+    else:
+        ok("交叉引用：指向附录的引用全部使用 \\appref（无裸 \\ref 跨入附录）")
+
+    # ③ 产物层：三册 PDF 中均不得出现 ??
+    if shutil_which("pdftotext"):
+        for path in (PDF, PDF_APPENDIX, PDF_FULL):
+            if not path.exists():
+                continue
+            txt = subprocess.run(["pdftotext", str(path), "-"], capture_output=True, text=True).stdout
+            n = txt.count("??")
+            if n:
+                err(f"{path.name} 中有 {n} 处「??」（未定义引用），必须修复后重新编译")
+            else:
+                ok(f"交叉引用：{path.name} 全文无「??」")
+
+
+# ---------------------------------------------------------------------------
+# 检查 9：行文风格（本次新增，只报"可机械判定"的项，全部为 WARNING）
+#   依据：论文写作规范——术语唯一、句长可控、标点体例统一。
+# ---------------------------------------------------------------------------
+STYLE_TERMS = [
+    # (禁用写法, 统一写法, 说明)
+    ("完美信息", "完全信息", "同一概念两种名称（perfect information）"),
+    ("口径口径", "口径", "模板句叠加产生的重复词"),
+]
+
+def check_style() -> None:
+    tex_files = tex_sources()
+    hits = []
+    for bad, good, why in STYLE_TERMS:
+        for p in tex_files:
+            for i, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1):
+                if line.lstrip().startswith("%"):
+                    continue
+                if bad in line:
+                    hits.append(f"{p.name}:{i} 「{bad}」→ 统一为「{good}」（{why}）")
+    if hits:
+        warn("术语/体例不统一：\n      " + "\n      ".join(hits))
+    else:
+        ok("行文风格：术语与体例关键项统一（无「完美信息」「口径口径」等混用）")
+
+    # 硬编码章号：正文不得写「第X章」，一律用 \chapref
+    hard = []
+    for p in [q for q in tex_files
+              if q.parent.name == "sections" and not q.name.startswith("90_")
+              and q.name != "refs.tex"]:
+        for i, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1):
+            if line.lstrip().startswith("%"):
+                continue
+            if re.search(r"第[一二三四五六七八九十]+章", line) or "§" in line:
+                hard.append(f"{p.name}:{i}")
+    if hard:
+        warn(
+            "硬编码章节号（改章序会失配，建议改用 \\chapref / \\ref）：\n      "
+            + "、".join(hard)
+        )
+    else:
+        ok("行文风格：正文无硬编码章号，全部走 \\chapref / \\ref")
+
+    # 表注体例：只允许「表注：」一种
+    badcap = []
+    for p in [q for q in tex_files if q.parent.name == "sections"]:
+        text = strip_comments(p.read_text(encoding="utf-8"))
+        for m in re.finditer(r"\{\\footnotesize\s*注[：:]", text):
+            badcap.append(p.name)
+    if badcap:
+        warn("表注体例不统一（应统一为「表注：」）：" + "、".join(sorted(set(badcap))))
+    else:
+        ok("行文风格：表注体例统一为「表注：」")
+
+    # 英文直引号：正文不得出现（中文引号用 “ ”）
+    straight = []
+    for p in [q for q in tex_files if q.parent.name == "sections"]:
+        for i, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1):
+            if line.lstrip().startswith("%"):
+                continue
+            if '"' in line:
+                straight.append(f"{p.name}:{i}")
+    if straight:
+        warn("存在英文直引号（应改为中文引号 “ ”）：\n      " + "、".join(straight))
+    else:
+        ok("行文风格：引号统一为中文弯引号")
+
+    # 超长句：正文散文句 >150 字给出提示（表内长行不计）
+    long_sent = []
+    for p in [q for q in tex_files
+              if q.parent.name == "sections" and not q.name.startswith("90_")
+              and q.name != "refs.tex"]:
+        text = strip_comments(p.read_text(encoding="utf-8"))
+        text = re.sub(r"\\begin\{(table|figure|tabularx|tabular|equation|align|algorithm)\}.*?"
+                      r"\\end\{\1\}", "", text, flags=re.S)
+        text = re.sub(r"\\[a-zA-Z]+\*?(\[[^\]]*\])?(\{[^{}]*\})?", "", text)
+        text = re.sub(r"\\\(.*?\\\)", "", text, flags=re.S)
+        text = re.sub(r"[{}\\]", "", text).replace("\n", "")
+        for s in re.split(r"[。；！？]", text):
+            s = s.strip()
+            if len(s) >= 150:
+                long_sent.append(f"{p.name}（{len(s)} 字）：{s[:40]}…")
+    if long_sent:
+        warn(f"超长句 {len(long_sent)} 处（≥150 字，建议一句一个判断）：\n      "
+             + "\n      ".join(long_sent[:8]))
+    else:
+        ok("行文风格：正文无 ≥150 字的散文长句")
 
 
 # ---------------------------------------------------------------------------
@@ -336,6 +541,9 @@ def main() -> int:
     check_figures()
     check_code_files()
     check_pdf(args.strict)
+    check_deliverables()
+    check_refs()
+    check_style()
 
     print("\n" + "-" * 78)
     for m in PASSED:

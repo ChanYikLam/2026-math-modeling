@@ -1,218 +1,149 @@
 %!TEX root = ../main.tex
 % =============================================================================
-%  四、问题 1：确定性条件下的计划购电模型      建议 4–5 页
+%  四、问题 1：确定性条件下的计划购电模型      目标 4 页
 %  评审在问：确定性版本做对了吗？
-%  本节必须出现：① 电量口径声明 + LP 全式（目标、电量平衡含弃光松弛、SOC 递推、
-%                SOC 界、充放功率界、日周期 S_0=S_144=6000）
-%                ② 充放互斥命题与证明（说明无需 0–1 变量）  ③ 模型规模
-%                ④ 对偶分析：水价值 nu_t、并网点边际价值 alpha_t、阈值律、死区宽度、
-%                   盈亏平衡比 1/(eta_c*eta_d)=1.2346、适用边界与数值验证
-%                ⑤ 无储能基线 C-01 与成本分解恒等式
-%                ⑥ 表 1/表 2（与 result1.xlsx 逐格一致）
-%                ⑦ 容量与充放功率双向扫描  ⑧ 效率口径极差
-%  口径与图名以 notes/写作交底.md §六 为准：C-01 在本节首次定义；弃光用 C-06（08 章定义）。
-%  图名：fig03_q1_dual_price.pdf / fig04_q1_capacity_power.pdf /
-%        fig05_cost_waterfall.pdf / fig10_strategy_mechanism.pdf
-%  单位纪律：功率 kW、电量 kWh、电价 元/kWh、费用 元；dt=1/6 h；P_max*dt=833.3333 kWh
+%  本节含：① 电量口径与 LP 全式（目标／平衡含弃光松弛／SOC 递推／SOC 界／功率界／日周期）
+%          ② 性质引理（充放互斥、能量恒等式）与证明
+%          ③ 对偶分析：水价值 ν_t、并网点边际价值 α_t、阈值律与死区宽度
+%          ④ 无储能基线 C-01、成本分解恒等式、容量/功率扫描、效率口径极差
+%  图名：fig03_q1_dual_price.pdf / fig10_strategy_mechanism.pdf
+%  单位纪律：功率 kW、电量 kWh、电价 元/kWh、费用 元；Δt=1/6 h；P̄Δt=833.3333 kWh
 % =============================================================================
 
-\section{问题 1：确定性条件下的计划购电模型}
+\section{问题 1：确定性条件下的计划购电模型}\label{chap:q1}
 
-\subsection{模型建立}
+\subsection{模型}
 
-\paragraph{建模口径}
-本文采用\textbf{电量口径}建模：决策变量均以电量（\unit{kWh}）为单位，步长 \(\Delta t=1/6\)~\unit{h}，
-充放电功率上限 \(\overline P=5000\)~\unit{kW} 折算为单槽电量上限 \(\overline P\Delta t=833.3333\)~\unit{kWh}；
-电价 \(p_t\)（\unit{元/kWh}）与电量相乘即为费用（\unit{元}），\textbf{不再乘 \(\Delta t\)}；
-负载与光伏（\unit{kW}）进入模型前一律乘以 \(\Delta t\) 化为电量。
+\textbf{口径。} 采用电量口径：决策变量均以电量（kWh）为单位，电价 \(p_t\)（元/kWh）与电量相乘即
+费用，\textbf{不再乘 \(\Delta t\)}；负载与光伏（kW）进模型前乘以 \(\Delta t\) 化为电量。
+电价与负载逐日相同、光伏给出一日预测，故只需求解一个典型日（附件 1），信息结构为“当日真值已知”。
+储能参数：额定容量 \(12\,000\)~kWh，运行区间 \([\underline S,\overline S]=[1200,10\,800]\)~kWh
+（可用摆幅 9600~kWh），额定功率 \(\overline P=5000\)~kW，单边效率 \(\eta_c=\eta_d=0.9\)（假设 A2）。
 
-\paragraph{数据与信息结构}
-电价与负载逐日相同、光伏只给出一日预测，故只需求解\textbf{一个典型日}（附件 1，144 个
-10~\unit{min} 时段），信息结构为"当日真值已知"的确定性情形。该日电价均值 0.7662~\unit{元/kWh}、
-范围 \([0.3713,1.3952]\)~\unit{元/kWh}；储能额定容量 12\,000~\unit{kWh}、最大充放电功率
-5000~\unit{kW}，储电量运行区间 \([1200,10800]\)~\unit{kWh}（可用摆幅 9600~\unit{kWh}），
-充放电效率单边各 0.9（往返 0.81，假设 A2）。结果窗口（2025-02-01 至 2025-12-31，共 334 天）
-背景量：负载日均电量 110\,802.6332~\unit{kWh}、光伏日均电量 57\,092.4850~\unit{kWh}、
-光伏峰值功率 10\,216.2000~\unit{kW}。
+决策变量为 \((E_t,c_t,d_t,s_t,S_t)\)，\(t\in\mathcal T\)，\(|\mathcal T|=144\)。模型为
 
-\paragraph{决策变量}
-计划购电量 \(E_t\)、充电量 \(c_t\)、放电量 \(d_t\)、弃光电量 \(s_t\) 与时段末储电量 \(S_t\)
-（单位均为 \unit{kWh}），\(t\in\mathcal T\)，\(|\mathcal T|=144\)。
-
-\paragraph{目标函数}
-以全天购电费用最小为目标（购电量均按当日实际电价结算）：
-
-\begin{equation}
-  \min_{E,c,d,s,S}\quad C^{\text{plan}}=\sum_{t=1}^{144} p_t\,E_t
-  \label{eq:q1-obj}
-\end{equation}
-
-\paragraph{约束条件}
-
-\begin{subequations}\label{eq:q1-cons}
-  % ---- 电量平衡（含弃光松弛）
-  \begin{equation}
-    E_t+\bigl(PV_t-L_t\bigr)\Delta t+d_t-c_t-s_t=0,
-    \qquad \forall t\in\mathcal T
-    \label{eq:q1-balance}
-  \end{equation}
-  % ---- 储电量递推
-  \begin{equation}
-    S_t=S_{t-1}+\eta_c\,c_t-\frac{d_t}{\eta_d},
-    \qquad \forall t\in\mathcal T
-    \label{eq:q1-soc}
-  \end{equation}
-  % ---- 储电量上下界
-  \begin{equation}
-    \underline S\le S_t\le \overline S,
-    \qquad \forall t\in\mathcal T
-    \label{eq:q1-socbound}
-  \end{equation}
-  % ---- 充放电功率界
-  \begin{equation}
-    0\le c_t\le \overline P\Delta t,\qquad
-    0\le d_t\le \overline P\Delta t,
-    \qquad \forall t\in\mathcal T
-    \label{eq:q1-power}
-  \end{equation}
-  % ---- 日周期条件
-  \begin{equation}
-    S_0=S_{144}=S^{init}=6000\ \unit{kWh}
-    \label{eq:q1-periodic}
-  \end{equation}
-  % ---- 非负
-  \begin{equation}
-    E_t\ge 0,\qquad s_t\ge 0
-    \qquad \forall t\in\mathcal T
-    \label{eq:q1-nonneg}
-  \end{equation}
+\begin{subequations}\label{eq:q1-model}
+\begin{align}
+  \min_{E,c,d,s,S}\quad & C^{\text{plan}}=\sum_{t}p_tE_t \label{eq:q1-obj}\\
+  \text{s.t.}\quad
+  & E_t+(PV_t-L_t)\Delta t+d_t-c_t-s_t=0, && \forall t \label{eq:q1-balance}\\
+  & S_t=S_{t-1}+\eta_c c_t-d_t/\eta_d, && \forall t \label{eq:q1-soc}\\
+  & \underline S\le S_t\le\overline S,\quad 0\le c_t,d_t\le \overline P\Delta t, && \forall t \label{eq:q1-socbound}\\
+  & E_t\ge0,\quad s_t\ge0, && \forall t \label{eq:q1-nonneg}\\
+  & S_0=S_{144}=S^{init}=6000\ \text{kWh}. \label{eq:q1-periodic}
+\end{align}
 \end{subequations}
 
-式~\eqref{eq:q1-balance} 即"微网提供的电能不低于小区负载"的代数表达，其中
-\(\bigl(PV_t-L_t\bigr)\Delta t\) 为净负荷电量（盈余为负）。光伏盈余可能超过充电功率上限与
-负载之和，故以\textbf{等式加松弛量 \(s_t\ge0\)} 写出以保证可行；附件 1 典型日的日内光伏盈余
-低于容量摆幅 9600~\unit{kWh} 与单槽吸纳能力 \(\overline P\Delta t=833.3333\)~\unit{kWh}，
-最优弃光 \(s_t\equiv 0\)（\calref{C-06} 的处置量在问题 1 中即弃光电量，见 \S\ref{sec:q1-results}）。
-同一典型日上"含松弛量的等式""不含松弛量的等式""不等式"三种写法的最优值完全相同
-（均为 35\,126.9486~\unit{元}），保留 \(s_t\) 的意义在于\textbf{实际日期序列}
-（窗口内光伏峰值功率 10\,216.2000~\unit{kW}）的可行性。式~\eqref{eq:q1-periodic} 即题面
-"储能设备在 \(0{:}00\) 和 \(24{:}00\) 的储电量相同"，本文进一步取两者均为附录给定的初始
-储电量 6000~\unit{kWh}，敏感性见 \S\ref{sec:q1-results}。
+式~\eqref{eq:q1-balance} 即“微网供给不低于小区负载”的代数表达，\((PV_t-L_t)\Delta t\) 为净负荷电量
+（盈余为负）。光伏盈余可能超过充电功率与负载之和，故以\textbf{等式加松弛 \(s_t\ge0\)} 写出以保证
+可行；典型日的日内盈余低于摆幅 9600~kWh 与单槽吸纳能力 \(\overline P\Delta t=833.3333\)~kWh，
+故最优 \(s_t\equiv0\)。同一典型日上“含松弛等式／不含松弛等式／不等式”三种写法的
+最优值完全相同（均为 \(35\,126.9486\)~元），保留 \(s_t\) 的意义在于实际日期序列
+（窗口内光伏峰值 \(10\,216.2000\)~kW）的可行性。式~\eqref{eq:q1-periodic} 即题面“两端储电量相同”，
+本文进一步取两者均等于附件给定的初值 6000~kWh。
 
-\paragraph{模型规模}
-求解采用 \(4\times144=576\) 个决策变量（\(E_t,c_t,d_t,S_t\)）、144 个等式约束
-（式~\eqref{eq:q1-soc}）与 144 个不等式约束（式~\eqref{eq:q1-balance} 与式~\eqref{eq:q1-power}
-的合并形式），是连续线性规划（LP）；显式保留 \(s_t\) 时变量数为 \(5\times144=720\) 个。
-充放互斥由模型结构自动保证（\S\ref{sec:q1-prop}），\textbf{无需 0--1 变量}，模型保持纯 LP。
+模型规模为 \(4\times144=576\) 个变量、288 条约束（显式保留 \(s_t\) 时为 720 个变量），是连续 LP；
+充放互斥由模型结构自动成立，\textbf{无需 0--1 变量}。
 
-\subsection{模型性质}\label{sec:q1-prop}
+\subsection{两条结构性质}
 
 \begin{proposition}[充放互斥]\label{prop:no-simul}
-当 \(\eta_c\eta_d<1\) 时，最优解中不存在同一时段既充电又放电的情形。
+若 \(\eta_c\eta_d<1\)，则最优解中不存在 \(c_t,d_t\) 同时为正的时段。
 \end{proposition}
 
 \begin{proof}
-设某时段 \(t\) 同时有 \(c_t>0\) 与 \(d_t>0\)。取
-\(\delta=\min\{c_t,\ d_t/(\eta_c\eta_d)\}>0\)，构造新解
-\(c_t'=c_t-\delta\)、\(d_t'=d_t-\eta_c\eta_d\delta\ge 0\)，其余时段变量不变。
-由式~\eqref{eq:q1-soc}，储电量变化为
-\(\eta_c(-\delta)-(-\eta_c\eta_d\delta)/\eta_d=0\)，
-故整条储电量轨迹与全部上下界约束均不变，新解仍可行。
-由式~\eqref{eq:q1-balance}，购电量变化为
-\(\Delta E_t=\Delta c_t-\Delta d_t=-\delta+\eta_c\eta_d\delta=-\delta(1-\eta_c\eta_d)<0\)，
-目标函数下降 \(p_t\delta(1-\eta_c\eta_d)>0\)，与原解最优矛盾。
+设某 \(t\) 有 \(c_t>0,d_t>0\)。取 \(\delta=\min\{c_t,\ d_t/(\eta_c\eta_d)\}>0\)，作
+\(c_t'=c_t-\delta\)、\(d_t'=d_t-\eta_c\eta_d\delta\ge0\)，其余不变。由式~\eqref{eq:q1-soc}，
+储电量变化 \(\eta_c(-\delta)+\eta_c\eta_d\delta/\eta_d=0\)，故储电量轨迹与全部界约束不变，新解可行；
+由式~\eqref{eq:q1-balance}，购电量变化
+\(\Delta E_t=-\delta+\eta_c\eta_d\delta=-\delta(1-\eta_c\eta_d)<0\)，目标下降
+\(p_t\delta(1-\eta_c\eta_d)>0\)，与原解最优矛盾。
 \end{proof}
 
-命题~\ref{prop:no-simul} 的证明只用 \(\eta_c\eta_d<1\)、\(p_t>0\) 与平衡式的结构，
-对问题 1--4 的全部变体（含波动电价与调整成本）一致成立。数值验证：同时充放时段数 0，
-储电量递推残差 \(9.09\times10^{-13}\)~\unit{kWh}，充放比偏差 \(4.44\times10^{-16}\)
-（审计项 A5，见 \S\ref{sec:q1-results}）。
+命题~\ref{prop:no-simul} 只用 \(\eta_c\eta_d<1\)、\(p_t>0\) 与平衡式结构，对问题 1--4 的全部变体
+一致成立。数值验证：同时充放时段数 0，储电量递推残差 \(9.09\times10^{-13}\)~kWh，
+充放比偏差 \(4.44\times10^{-16}\)（审计 A5）。
+
+\begin{lemma}[能量恒等式]\label{lem:energy}
+逐槽由式~\eqref{eq:q1-balance} 解出 \(E_t\) 并对 \(t\) 求和，再用式~\eqref{eq:q1-soc} 消去充放电量，得
+\begin{equation}
+  \sum_{t}E_t=\sum_{t}(L_t-PV_t)\Delta t+\sum_{t}c_t-\sum_{t}d_t
+  \ \xrightarrow{\ S_{144}=S_0\ }\
+  \sum_{t}(L_t-PV_t)\Delta t+\bigl(1-\eta_c\eta_d\bigr)\sum_{t}c_t .
+  \label{eq:q1-energy}
+\end{equation}
+\end{lemma}
+
+引理~\ref{lem:energy} 有三点用途。① \textbf{它是“恒价无套利”的代数根源}：若日内电价恒为
+\(\bar p\)，则目标 \(\bar p\sum_tE_t\) 只随循环量 \(\sum_tc_t\) 变化，与充放时序无关，储能\emph{没有}
+时段套利价值；反之，题面背景段所指的“低充高放”只有在日内电价随时刻变化时才有对象，这从代数上支持
+假设 A11（附件 1 的 144 点曲线逐日重复）。② \textbf{它是零成本的可行性回归校验}：逐槽核验
+式~\eqref{eq:q1-energy}，典型日两侧之差在 \(10^{-4}\)~kWh 量级（即四位小数取整量级）。
+③ \textbf{它分离了两问的价值来源}：问题 1 的节省来自改变 \(\sum_tE_t\) 的\emph{时段结构}（套利），
+问题 2 的安全边际来自改变其\emph{分布}（降低高价缺口的期望），两者可叠加但不可互替。
 
 \subsection{对偶分析与阈值型最优策略}
 
-引入两个对偶量：\(\nu_t\) 为式~\eqref{eq:q1-soc} 的影子价格，即\textbf{时段 \(t\) 末单位
-储电量的边际价值}（水价值，\unit{元/kWh}）；\(\alpha_t\) 为式~\eqref{eq:q1-balance} 的影子价格，
-即\textbf{并网点单位电量的边际价值}（\unit{元/kWh}）。符号约定：\(\alpha_t\) 取非负值，
-与该约束的标准拉格朗日乘子相差一个负号（标准乘子的非正性由 \(s_t\ge0\) 的互补松弛给出）。
-在充放电功率界与储电量界均不活跃时，对 \(c_t,d_t\) 的平稳性条件给出互补松弛式：
+记 \(\nu_t\) 为式~\eqref{eq:q1-soc} 的影子价格，即\textbf{单位储电量的边际价值}（水价值，元/kWh）；
+\(\alpha_t\) 为式~\eqref{eq:q1-balance} 的影子价格（并网点电量的边际价值，元/kWh，取非负约定）。
+在储电量界与功率界均不活跃时，对 \(c_t,d_t\) 的平稳性条件给出互补松弛对
 
-\begin{subequations}\label{eq:q1-kkt}
-  \begin{equation}
-    z^{c}_t=\alpha_t-\eta_c\,\nu_{t}\ \ge 0,\qquad
-    c_t\,z^{c}_t=0
-    \label{eq:q1-kkt-c}
-  \end{equation}
-  \begin{equation}
-    z^{d}_t=-\alpha_t+\frac{\nu_{t}}{\eta_d}\ \ge 0,\qquad
-    d_t\,z^{d}_t=0
-    \label{eq:q1-kkt-d}
-  \end{equation}
-\end{subequations}
+\begin{equation}
+  z^{c}_t=\alpha_t-\eta_c\nu_t\ge0,\quad c_tz^{c}_t=0;\qquad
+  z^{d}_t=-\alpha_t+\nu_t/\eta_d\ge0,\quad d_tz^{d}_t=0 .
+  \label{eq:q1-kkt}
+\end{equation}
 
-式~\eqref{eq:q1-kkt-c}：多充 1~\unit{kWh} 的边际代价为 \(\alpha_t\)，换来 \(\eta_c\)~\unit{kWh}
-储电、价值 \(\eta_c\nu_t\)，故\textbf{并网点电量边际价值低于储电边际价值折算水平时才充电}；
-式~\eqref{eq:q1-kkt-d}：多放 1~\unit{kWh} 可替代 \(\alpha_t\) 的购电成本，代价是储电量减少
-\(1/\eta_d\)~\unit{kWh}。两条阈值可直接与电价比较：\textbf{当 \(E_t>0\)（正在向外网购电）时
-\(\alpha_t=p_t\)}（实测偏差 0.000）；当 \(E_t=0\)（光伏与放电已满足负载）时 \(\alpha_t\le p_t\)，
-实测 \(\alpha_t-p_t\) 最大值为 \(-0.0042\)~\unit{元/kWh}，恒不为正。由此得\textbf{阈值型最优策略}：
+其经济含义为：多充 1~kWh 的边际代价是 \(\alpha_t\)，换回 \(\eta_c\)~kWh 储电、价值
+\(\eta_c\nu_t\)，故仅当 \(\alpha_t\le\eta_c\nu_t\) 时充电；多放 1~kWh 可替代 \(\alpha_t\) 的购电成本，
+代价是储电量减少 \(1/\eta_d\)~kWh，故仅当 \(\alpha_t\ge\nu_t/\eta_d\) 时放电。当 \(E_t>0\) 时由互补
+松弛得 \(\alpha_t=p_t\)（实测偏差 \(\le10^{-6}\)）；当 \(E_t=0\) 时 \(\alpha_t\le p_t\)。由此得
 
 \begin{proposition}[阈值律]\label{prop:threshold}
-在储电量上下界均不活跃（\(\underline S<S_t<\overline S\)）的时段，
-最优充放电策略由两条阈值刻画：
-当 \(\alpha_t\le \eta_c\nu_{t}\) 时充电，当 \(\alpha_t\ge \nu_{t}/\eta_d\) 时放电；
-当
+在储电量界不活跃（\(\underline S<S_t<\overline S\)）的时段，最优充放策略由两条阈值刻画：
+\(\alpha_t\le\eta_c\nu_t\) 时充电，\(\alpha_t\ge\nu_t/\eta_d\) 时放电，而
 \begin{equation}
-  \eta_c\,\nu_{t}\ <\ \alpha_t\ <\ \frac{\nu_{t}}{\eta_d}
+  \eta_c\nu_t\ <\ \alpha_t\ <\ \nu_t/\eta_d
   \label{eq:q1-deadband}
 \end{equation}
-时 \(c_t=d_t=0\)，构成"死区"。
+时 \(c_t=d_t=0\)，构成“死区”。
 \end{proposition}
 
-式~\eqref{eq:q1-deadband} 的死区宽度随往返效率下降而变宽：两条阈值之比为
-\((\nu_t/\eta_d)/(\eta_c\nu_t)=1/(\eta_c\eta_d)\)，\(\eta_c=\eta_d=0.9\) 时为 \(1/0.81=1.2346\)。
-即\textbf{同一水价值水平下，放电时段的并网点电量边际价值须高于充电时段的 1.2346 倍，
-跨时段套利才有利可图}；购电时段该判据直接化为放电电价高于充电电价 1.2346 倍，
-此即全文的盈亏平衡比。
+死区宽度随往返效率下降而变宽：两条阈值之比为 \((\nu_t/\eta_d)/(\eta_c\nu_t)=1/(\eta_c\eta_d)=1.2346\)。
+即\textbf{放电时段的并网点电量边际价值须高于充电时段的 1.2346 倍，跨时段套利才有利可图}；在购电
+时段该判据化为放电电价高于充电电价 1.2346 倍，此即式~\eqref{eq:ch1-arb} 的盈亏平衡比。
 
-命题~\ref{prop:threshold} 的\textbf{适用边界}：它在"纯套利子问题（变量仅 \(c_t,d_t,S_t\)）
-且储电量界不活跃"时精确成立；\(\underline S\) 或 \(\overline S\) 活跃时须回到互补松弛形式
-式~\eqref{eq:q1-kkt-c}--\eqref{eq:q1-kkt-d} 并额外计入界乘子 \(\lambda^{\pm}_t\)；
-充放电功率界活跃时 \(z^{c}_t\) 或 \(z^{d}_t\) 不再为零，简单阈值关系失效。数值验证分两层：
-全部 144 个时段上按 \(\alpha_t\) 判定充电/放电/死区的\textbf{违反次数为 0}；储电量界不活跃的
-97 个时段子集（充电槽 42 个、放电槽 36 个）上违反次数同样为 0；两条互补松弛恒等式的最大残差
-均为 0.000~\unit{元/kWh}。实测 \(\nu_t\in[0.4711,1.1305]\)、\(\alpha_t\in[0.3713,1.2561]\)~\unit{元/kWh}
-均\textbf{时变}，故无"全天统一的电价阈值"：正确表述是两级结构——先由 LP 对偶确定时变
-水价值曲线，再逐时段比较 \(\alpha_t\) 与两条阈值 \evid{C-Q1-02}。
+\textbf{适用边界。} 命题~\ref{prop:threshold} 在“纯套利子问题（变量仅 \(c_t,d_t,S_t\)）且储电量界
+不活跃“时精确成立；界活跃时须回到式~\eqref{eq:q1-kkt} 并计入界乘子；功率界活跃时 \(z^c_t\) 或
+\(z^d_t\) 不再为零，简单阈值关系失效。数值验证分两层：144 个时段上按 \(\alpha_t\) 判定充／放／死区的
+\textbf{违反次数为 0}；界不活跃的 97 个时段子集（充电槽 42、放电槽 36）上违反次数同样为 0，
+两条互补松弛恒等式最大残差为 0。实测 \(\nu_t\in[0.4711,1.1305]\)、\(\alpha_t\in[0.3713,1.2561]\)~元/kWh
+均\textbf{时变}，故不存在“全天统一的电价阈值”；正确表述是两级结构——先由 LP 对偶确定时变水价值曲线，
+再逐时段比较 \(\alpha_t\) 与两条阈值 \evid{C-Q1-02}。
 
 \begin{figure}[htbp]
   \centering
-  \includefig[width=0.80\linewidth]{fig03_q1_dual_price.pdf}
-  \caption{最优性证书：电价、水价值与阈值型策略（上子图：电价 \(p_t\) 与并网点电量边际价值
-            \(\alpha_t\)，虚线为充电阈值 \(\eta_c\nu_t\) 与放电阈值 \(\nu_t/\eta_d\)，阴影为死区；
-            下子图：最优充电量与放电量；对象为附件 1 典型日的 144 个 10~\unit{min} 时段，
-            电价单位 \unit{元/kWh}，电量单位 \unit{kWh}；
-            阈值一致性检验在全部 144 个时段上的违反次数为 0，
-            储电量界不活跃的 97 个时段子集内违反次数亦为 0）}
+  \includefig[width=0.60\linewidth]{fig03_q1_dual_price.pdf}
+  \caption{最优策略的机制解释（三子图共享时间轴：光伏与负载功率、电价与储电量（右轴标出上下界
+            1200/10800~kWh）、充放电量；对象：附件 1 典型日 144 槽）}
   \label{fig:dualprice}
 \end{figure}
 
-水价值 \(\nu_t\) 随储电量水平单调不增；充放电功率的边际价值须由式~\eqref{eq:q1-power}
-的对偶量另行报告（\S\ref{sec:q1-results}）。
+\subsection{无储能基线与成本分解}
 
-\subsection{无储能基线的闭式解}
+无储能时 \(c_t=d_t=s_t=0\)，由式~\eqref{eq:q1-balance} 得闭式
+\(E_t=\Delta t\max(L_t-PV_t,0)\)，据此定义基线
 
-\begin{caliber}{C-01}{无储能基线购电费 \(C^{base}\)}
-\textbf{定义}\quad \(C^{base}=\sum_{t=1}^{144}p_t\,\Delta t\,\max\bigl(L_t-PV_t,\ 0\bigr)\)，
-即不配储能、逐时段按净负荷购电的费用；%
-\textbf{数据}\quad 典型日口径取附件 1 的负载、光伏与电价；%
-\textbf{时段}\quad \(t=1,\dots,144\)，\(\Delta t=1/6\)~\unit{h}；
-结果窗口 2025-02-01 至 2025-12-31（334 天）；%
-\textbf{单位}\quad \unit{元}（表内保留 2 位小数，内部计算不取整）；%
-\textbf{不含}\quad 储能充电成本、紧急购电费、调整与违约费用、容量补偿与循环衰减；%
-\textbf{对照}\quad 三个变体的数值见表~\ref{tab:cbases}；
-窗口口径下波动电价较固定电价高 619\,463.23~\unit{元}（相对固定价口径 \(3.78\%\)）；%
-\textbf{复算}\quad \texttt{code/config.py::baseline\_cost}，审计项 A1。
-\end{caliber}
+\begin{equation}
+  C^{base}=\sum_t p_t\Delta t\max\bigl(L_t-PV_t,0\bigr),\qquad
+  \sum_t p_tE_t=C^{base}+C^{batt},
+  \label{eq:q1-decomp}
+\end{equation}
+
+其中 \(C^{batt}=\sum_t p_t\bigl(\Delta t\min(L_t-PV_t,0)+c_t-d_t+s_t\bigr)\) 为储能与弃光带来的成本
+增量（典型日取负值即费用下降）。式~\eqref{eq:q1-decomp} 是\textbf{逐项恒等式}而非两个独立最优值
+之和，\(C^{batt}\) 的最小化仍需求解式~\eqref{eq:q1-model}。基线有三个变体，\textbf{不得混用}
+（表~\ref{tab:cbases}），否则全文多个“节省率”互不可比。
 
 \begin{table}[htbp]
   \centering
@@ -230,33 +161,18 @@
   \end{tabularx}
 \end{table}
 
-三个变体不得混用，否则论文中出现的多个"节省率"互不可比。
+\subsection{求解结果与机制}
 
-\paragraph{成本分解恒等式}
-由式~\eqref{eq:q1-balance} 解出 \(E_t\) 并代入目标，可得
-\begin{equation}
-  \sum_t p_tE_t
-  =\underbrace{\sum_t p_t\Delta t\max(L_t-PV_t,0)}_{C^{base}}
-  +\underbrace{\sum_t p_t\bigl(\Delta t\min(L_t-PV_t,0)+c_t-d_t+s_t\bigr)}_{C^{batt}},
-  \label{eq:q1-decomp}
-\end{equation}
-其中 \(C^{batt}\) 为储能与弃光带来的成本增量（典型日取负值，即费用下降）。式~\eqref{eq:q1-decomp}
-是\textbf{逐项恒等式}而非"两个独立最优值之和"，\(C^{batt}\) 的最小化仍需求解
-式~\eqref{eq:q1-obj}--\eqref{eq:q1-nonneg}：代入 \(C^{base}=48\,052.0466\)~\unit{元} 与最优值
-\(35\,126.9486\)~\unit{元} 得 \(C^{batt}=-12\,925.0980\)~\unit{元}，与目标函数直接相减一致。
-
-\subsection{求解结果}\label{sec:q1-results}
-
-在附件 1 典型日上求解式~\eqref{eq:q1-obj}--\eqref{eq:q1-nonneg}，得：全天购电量
-59\,482.6990~\unit{kWh}（\calref{C-02}）、全天购电费 35\,126.9486~\unit{元}，相对无储能基线
-\(C^{base}=48\,052.0466\)~\unit{元}（\calref{C-01} 变体 V1）节省 12\,925.0980~\unit{元}，
-\textbf{节省率 26.90\%}（\calref{C-04}，相对 \calref{C-01}）\evid{C-Q1-03}。
-储能充电量 20\,740.6661~\unit{kWh}、放电量 16\,799.9396~\unit{kWh}，之比
-\(20\,740.6661/16\,799.9396=1.2346=1/(\eta_c\eta_d)=1/0.81\)，即\textbf{放电量与充电量之比
-等于往返效率 0.81}，与式~\eqref{eq:q1-soc} 的效率方向一致（充放比偏差 \(4.44\times10^{-16}\)）。
-最优弃光量 0.0000~\unit{kWh}（\calref{C-06}）\evid{C-Q1-01}；储电量全程位于
-\([1200.0000,10800.0000]\)~\unit{kWh}，\(0{:}00\) 与 \(24{:}00\) 均为 6000.0000~\unit{kWh}
-（严格日周期，\calref{C-08}）。
+在附件 1 典型日上求解式~\eqref{eq:q1-model}：全天购电量 \(59\,482.6990\)~kWh（\calref{C-02}）、
+购电费 \(35\,126.9486\)~元，相对 \(C^{base}=48\,052.0466\)~元（变体 V1）节省
+\(12\,925.0980\)~元，\textbf{节省率 \(26.90\%\)}（\calref{C-04}）\evid{C-Q1-03}；
+充电量 \(20\,740.6661\)~kWh、放电量 \(16\,799.9396\)~kWh，二式互为倒数——
+\(c/d=1.2346=1/(\eta_c\eta_d)\)，其倒数 \(d/c=0.8100=\eta_c\eta_d\) 即往返效率本身（\calref{C-07}）；
+最优弃光 \(0.0000\)~kWh（\calref{C-06}）\evid{C-Q1-01}；储电量全程位于
+\([1200.0000,10\,800.0000]\)~kWh，两端均为 \(6000.0000\)~kWh（严格日周期）。由
+式~\eqref{eq:q1-decomp} 代入上述数值得 \(C^{batt}=-12\,925.0980\)~元，与目标函数直接相减一致。
+表~\ref{tab:q1-buy}、表~\ref{tab:q1-soc} 按题面表 1、表 2 格式给出指定时段与 4~h 块的结果
+（与 \texttt{result1.xlsx} 逐格一致）。
 
 \begin{table}[htbp]
   \centering
@@ -275,11 +191,8 @@
     \bottomrule
   \end{tabular}
   \\[1ex]
-  {\footnotesize 表注：时段按题面表述取区间左端时刻，如 \(10{:}00\)--\(10{:}10\) 表示
-  \([10{:}00,10{:}10)\)；\texttt{result1.xlsx} 沿用模板既有的时段末端标签
-  （首个标签 \(0{:}10\)--\(0{:}20\)、末个标签 \(0{:}00{+}1\)--\(0{:}10{+}1\)），
-  其数值与本文槽位按\textbf{位置}一一对应（槽 \(j\) 写入第 \(j+1\) 个数据行），标签仅作显示，
-  两者相差一个标签位。}
+  {\footnotesize 表注：时段按题面表述取区间左端时刻；\texttt{result1.xlsx} 沿用模板既有的时段末端
+  标签，其数值与本文槽位按\textbf{位置}一一对应（槽 \(j\) 写入第 \(j+1\) 个数据行），标签仅作显示。}
 \end{table}
 
 \begin{table}[htbp]
@@ -300,17 +213,13 @@
     \bottomrule
   \end{tabular}
   \\[1ex]
-  {\footnotesize 表注：每段含 36 个 10~\unit{min} 槽；
-  6 段之和与逐槽求和一致——充电 20\,740.6661~\unit{kWh}、放电 16\,799.9396~\unit{kWh}（\calref{C-07}）。}
+  {\footnotesize 表注：每段含 36 个 10~min 槽；6 段之和与逐槽求和一致——充电 20\,740.6661~kWh、
+  放电 16\,799.9396~kWh（\calref{C-07}）。}
 \end{table}
-
-物理机制见图~\ref{fig:mechanism}：充电时段与光伏盈余时段、低价时段对齐，放电时段与
-高价时段对齐，储电量全程位于 \([1200,10800]\)~\unit{kWh} 内；两组时段只是\textbf{部分重合}，
-说明主机制是面向价格的跨时段套利，而非简单的"把午间盈余搬到傍晚"。
 
 \begin{figure}[htbp]
   \centering
-  \includefig[width=0.82\linewidth]{fig10_strategy_mechanism.pdf}
+  \includefig[width=0.54\linewidth]{fig10_strategy_mechanism.pdf}
   \caption{最优策略的机制解释（三子图共享时间轴：光伏与负载功率（\unit{kW}）、
             电价与储电量（\unit{元/kWh}、\unit{kWh}，储电量右轴标出上下界 1200/10800~\unit{kWh}）、
             充放电量（\unit{kWh}）；对象为附件 1 典型日的 144 个 10~\unit{min} 时段，
@@ -318,54 +227,43 @@
   \label{fig:mechanism}
 \end{figure}
 
-成本分解与节省来源见图~\ref{fig:costwaterfall}（\calref{C-01} 变体 V1 为底柱，
-末柱为最优全天购电费 35\,126.9486~\unit{元}，差额即储能搬运与弃光处置的收益）。
+图~\ref{fig:mechanism} 显示充电时段与光伏盈余时段、低价时段对齐，放电时段与高价时段对齐，
+两组时段只\textbf{部分重合}，说明主机制是面向价格的跨时段套利，而非“把午间盈余搬到傍晚”。
+可行性复核：供需平衡残差 \(1.49\times10^{-13}\)~kWh、储电量递推残差 \(9.09\times10^{-13}\)~kWh、
+日周期偏差 \(\le10^{-12}\)~kWh；越界、同时充放与负购电的时段数均为 0；费用相对复算误差
+\(\le10^{-6}\)（\S\ref{sec:audit}）。
 
+\subsection{容量与功率的边际价值、效率口径}
 
+在保持 10\%--90\% 放电深度（\(\underline S=0.1E_{cap}\)、\(\overline S=0.9E_{cap}\) 同步移动）下扫描
+额定容量，并单独扫描功率上限（完整档位见 \appref{tab:scan-app}{E 容量与功率扫描明细}）：
 
-\paragraph{解的最优性与可行性复核}
-除目标值与独立复算一致外，另做四类残差检验（\S9.3 与附录 D）：供需平衡残差
-\(1.49\times10^{-13}\)~\unit{kWh}、最小供给盈余 \(-2.27\times10^{-13}\)~\unit{kWh}、
-储电量递推残差 \(9.09\times10^{-13}\)~\unit{kWh}、日周期偏差 0.0000~\unit{kWh}；
-储电量越界、充放电功率越界、同时充放与负购电的时段数均为 0；费用相对复算误差 0.0000。
+\begin{equation}
+  \begin{aligned}
+    E_{cap}:12\,000\to28\,800\ \text{kWh} &\Rightarrow \Delta C=-6272.42\ \text{元}\ (-17.86\%),\\
+    \overline P:5000\to10\,000\ \text{kW} &\Rightarrow \Delta C=-166.36\ \text{元}\ (-0.47\%),\\
+    \text{仅解除 }\overline S &\Rightarrow -22.14\%\ (27\,351.55\ \text{元}),\qquad
+    \text{仅解除 }\overline P &\Rightarrow -1.66\%\ (34\,544.43\ \text{元}).
+  \end{aligned}
+  \label{eq:q1-scan}
+\end{equation}
 
-\paragraph{日周期条件的敏感性}
-题面只要求 \(0{:}00\) 与 \(24{:}00\) 的储电量\textbf{相等}，未要求等于 6000~\unit{kWh}。
-放松为"两端相等、取值自由"时最优费用 35\,118.5986~\unit{元}、两端储电量 8550.0000~\unit{kWh}，
-比主口径低 8.3500~\unit{元}（\(-0.0238\%\)）。相差不足 0.03\% 仍须显式声明口径：
-若允许日末自由（只固定日初），储能会被"掏空"到下界，费用虚低、节省率不可比。
+界活跃统计：充电功率界在 \(19/144\) 个时段被打满，放电功率界 \(0/144\)；储电量上界活跃
+\(21/144\)、下界活跃 \(8/144\)。故\textbf{容量摆幅是主要瓶颈，充放电功率仅在部分时段同时构成约束}，
+两者量级相差一个数量级；与 \chapref{chap:verify} 的 Sobol 全局灵敏度一致（详见
+\appref{tab:sobol-app}{E Sobol 灵敏度指数}）。
 
-\paragraph{容量与充放功率的双向扫描}
-储能能否进一步降费，取决于"容量摆幅"与"充放功率"哪个更紧。本文在保持 10\%--90\% 放电深度
-（\(\underline S=0.1E_{cap}\)、\(\overline S=0.9E_{cap}\) 同步移动）下扫描额定容量，
-并单独扫描充放功率上限，结果列于表~\ref{tab:q1-scan} 与图~\ref{fig:watervalue}。
+\textbf{效率口径。} 题面“充放电效率为 90\%”未区分充、放方向，故须显式声明口径
+（主口径的选择理由见假设 A2）。以 \(\eta_c,\eta_d\) 的四种读法重解，得节省额
 
+\begin{equation}
+  \Delta C:\quad
+  \underbrace{12\,925.10}_{0.9/0.9\ (\text{主口径})},\quad
+  \underbrace{14\,250.99}_{\text{往返 }0.9},\quad
+  \underbrace{14\,635.52}_{\text{仅充 }0.9},\quad
+  \underbrace{13\,883.44}_{\text{仅放 }0.9}\quad(\text{元}),
+  \label{eq:q1-eff}
+\end{equation}
 
-
-\begin{figure}[htbp]
-  \centering
-  \includefig[width=0.80\linewidth]{fig04_q1_capacity_power.pdf}
-  \caption{储能容量与充放功率上限的双向扫描（左：以额定容量为横轴的最优全天购电费与边际价值
-            \(\partial C^{*}/\partial E_{cap}\)；右：以充放功率上限为横轴的最优购电费；
-            对象为附件 1 典型日的 144 个 10~\unit{min} 时段，日周期条件 \(S_0=S_{144}=6000\)~\unit{kWh}，
-            容量与功率各 5--7 个扫描点，费用单位：\unit{元}）}
-  \label{fig:watervalue}
-\end{figure}
-
-扫描结果（表~\ref{tab:q1-scan}）：① 容量由 12\,000~\unit{kWh} 增至 28\,800~\unit{kWh}
-可再省 6272.42~\unit{元}（\(17.86\%\)），充放功率上限由 5000~\unit{kW} 提高到 10\,000~\unit{kW}
-只能再省 166.36~\unit{元}（\(0.47\%\)）；② 单独解除储电量上限可多省 \(22.1\%\)，
-单独解除充放功率上限只多省 \(1.7\%\)；③ 充电功率界在 19/144 个时段被打满、放电功率界
-0/144，储电量上界活跃 21/144、下界活跃 8/144。故\textbf{容量摆幅是主要瓶颈，
-充放电功率在部分时段同时构成约束，两者量级不同}；与第九章 Sobol 全局灵敏度
-（典型日模型，\(N=256\)）一致：全天购电费的一阶指数中储电量上限 0.2510、下限 0.1099，
-充放功率上限 0.0263（电价、光伏、负载为常数缩放，指数为 0）。
-
-\paragraph{效率口径的敏感性}
-题面"充放电效率为 90\%"未区分充电侧与放电侧。本文主口径取\textbf{单边各 0.9（往返 81\%）}，
-并给出对照：仅充电侧 0.9 时最优购电费 33\,416.53~\unit{元}、节省 14\,635.52~\unit{元}
-（\(30.46\%\)）；仅放电侧 0.9 时 34\,168.61~\unit{元}、节省 13\,883.44~\unit{元}（\(28.89\%\)）；
-主口径 35\,126.95~\unit{元}、节省 12\,925.10~\unit{元}（\(26.90\%\)）；若把 90\% 读作往返效率
-折算为单边 \(0.9487\)，最优购电费 33\,801.06~\unit{元}、节省 14\,250.99~\unit{元}。
-三种单边读法的节省额极差 \(14\,635.52-12\,925.10=1710.42\)~\unit{元}，
-占主口径节省额 \(13.2\%\)，故效率口径必须显式声明，否则节省率不可比。
+极差 \(1710.42\) 元，占主口径节省额的 \(13.2\%\)。故效率口径必须声明，否则同一模型可报出相差
+八分之一的节省率。

@@ -14,15 +14,23 @@
 
 | 交付物 | 路径 | 说明 |
 |---|---|---|
-| 参赛论文（PDF） | `main.pdf` | 摘要页 + 正文（≤30 页）+ 参考文献 + 附录 A–H，单文件、无目录、无身份信息 |
-| LaTeX 源文件 | `main.tex` `preamble.tex` `sections/` | 可重新编译 |
-| 源程序 | `code/` | 12 个 Python 脚本，一键复现 `python3 code/run_all.py` |
+| **参赛论文（正文，单独一册）** | `main.pdf` | **摘要页 1 页 + 正文 23 页 + 参考文献（与正文同末页）＝ 24 页、0.9 MB**；无目录、无身份信息、**不含任何源程序与附录** |
+| **附录（单独一册）** | `appendix.pdf` | 附录 A--O 共 **105 页、1.5 MB**，含全部源程序清单、审计报告、数据字典、长推导、明细表与附图；页数不限，须与正文一起打印装订 |
+| 合并版（备用） | `full.pdf` | 正文 + 附录合成一个文件（**128 页、2.1 MB**），供"要求单一 PDF 含附录"的场合使用 |
+| 三个编译入口 | `main.tex` / `appendix.tex` / `full.tex` | 共用同一套 `sections/`；`./build.sh` 依次编出 main → appendix → full（附录用 `xr` 读 `build/main.aux` 取正文编号，故必须后编） |
+| LaTeX 源文件 | `main.tex` `appendix.tex` `full.tex` `preamble.tex` `sections/` | `preamble.tex` 提供 `\chapref`（章引用）、`\appref`（正文→附录，未载入附录时降级为文字）、`\bref`（附录→正文，独立成册时输出"正文表 20"）三个宏；正文禁止硬编码章号与裸 `\ref` 跨入附录 |
+| 源程序 | `code/` | 23 个 Python 脚本 + 依赖清单，一键复现 `python3 code/run_all.py`（v2 新增 7 个） |
 | 结果文件 | `results/` | `result1.xlsx` `result2.xlsx` `result3.xlsx` `result4-2.xlsx` `result4-3.xlsx` |
-| 矢量图 | `figures/` | 图 1/2 为 TikZ，图 3–10 为矢量 PDF |
+| 矢量图 | `figures/` | 图 1/2 为 TikZ，图 3–10 与 v2 新增图 11–15 为矢量 PDF |
 | 中间结果 | `intermediate/` | 全部求解输出 JSON + 独立审计报告 |
 | 数值台账 | `notes/数值台账.md` `intermediate/paper_numbers.json` | 论文每个数字的出处 |
 | 写作交底 | `notes/写作交底.md` | 口径与模型的唯一权威说明 |
-| 上游文档蒸馏 | `notes/A…E_*.md` | 由题面/知识点/验证/炫技/行业文档蒸馏 |
+| 对比评审复核 | `notes/H_对比评审复核.md` | 对某 AI 两篇论文对比分析的逐项核验与更正 |
+| 干净化方案 | `notes/I_论文干净化方案.md` | 正文结构向 paper.pdf 收敛的可执行方案 |
+| 新增实验 | `code/exp_loaderr.py` `intermediate/exp_loaderr.json` | 假设 A9 的量化：负载预报误差相对 MAE 0%/5%/10% 三档重跑问题 2（0% 档与主结果逐位一致） |
+| 上游文档蒸馏 | `notes/A…E_*.md` | 由题面/知识点/验证/炫技/行业文档蒸馏；**文件头已加"数字不可用、以台账为准"声明** |
+| 对照稿红队审查 | `notes/F_参考论文红队审查.md` | 对 `另一个模型跑的论文/paper.pdf` 的逐项反算与可吸收清单 |
+| 论文优化方案 | `notes/G_论文优化方案.md` | 审查结论 → 可执行改动清单（P0/P1 与取舍） |
 
 ## 二、三分钟复现
 
@@ -55,18 +63,33 @@ touch final.flag && ./build.sh && python3 tools/check_paper.py --strict   # 定�
 - **瓶颈**：容量摆幅是主要瓶颈（解除容量上限可再省 22.1%），充放电功率在部分时段同时构成约束（解除后仅再省 1.7%）；
 - **套利条件**：峰谷价比高于 1/(\eta_c\eta_d)=1.2346 时有利。
 
+### v2 新增的对照实验（"结论是否成立"的证据，而不是更多模型）
+
+| 对照 | 关键数字 | 结论 |
+|---|---|---|
+| C 藤 pair-Copula 相依结构（S3.6） | tau(电价,负载)=+0.698；电价—光伏由自由度 3.23 的 t Copula 给出 tau=-0.238、lambda_U=lambda_L=0.0479 | 尾部共现存在但弱；决策相关的"电价—预报残差"对近似独立（tau=-0.0259） |
+| 四种情景生成器样本外对照（S7.3） | 184 天回放总费用 9 038 928.08-9 072 284.06 元（极差 0.37%）；紧急购电量差 48.5% | 费用结论对生成范式稳健；紧急购电分项必须带情景口径 |
+| 机会约束对照（S5.6） | 最优档 beta=0.10 总费用 14 339 249.60 元，仍比随机规划贵 0.52% | 期望值随机规划优于逐槽分位数边际；实测缺电频率约为标称 beta 之半 |
+| 盒式分布鲁棒对照（S7.5） | 最优 k*=1.5 回测 16 819 102.59 元，比随机规划高 11.43%、CVaR 高 8.72% | 全盒鲁棒被全面占优，只能作最坏情形上界 |
+| 分时段 CVaR 风险画像（S7.4） | 费用尾部集中在 15-18 时；缺电频率峰值 11 时 23.8%、5 时（波动价 34.6%） | 安全边际应按目标整点配置，而非全天统一加成 |
+| L 形（Benders）分解对拍（S9.7） | 334 天两算法最大相对间隙 3.76e-15；K=500 单日 2.42 s -> 0.16 s | 主结果另有独立数值路径复核 |
+
 ## 四、目录结构
 
 ```
 C题论文/
-├── main.tex  preamble.tex  build.sh  main.pdf
-├── sections/            摘要 + 正文十章 + 参考文献 + 附录 A–H
-├── figures/             fig01/fig02（TikZ）+ fig03–fig10（矢量 PDF）
-├── code/                全部源程序（config/lp_engine/q1–q4/results_io/exp_scan/exp_sobol/audit/paper_numbers/run_all）
+├── main.tex  appendix.tex  full.tex  preamble.tex  build.sh
+├── main.pdf（正文册）  appendix.pdf（附录册）  full.pdf（合并版，备用）
+├── sections/            摘要 + 正文十章 + 参考文献 + 附录 A–O（90_appendix.tex）
+├── figures/             fig01/fig02（TikZ）+ fig03–fig15（矢量 PDF，v2 新增 11–15）
+├── code/                全部源程序 23 个：主链（config/lp_engine/q1-q4/results_io/audit/paper_numbers/run_all）
+│                        + 对照实验（exp_scan/exp_sobol/exp_na/exp_benchmark/exp_copula/exp_chance/exp_dro/decomp）
+│                        + 建模工具（copula/scen_copula）+ 绘图（plot_figures/plot_figures_v2）
 ├── results/             五个结果文件
 ├── intermediate/        求解输出 JSON、审计报告、数值台账 JSON
-├── notes/               写作交底、数值台账、上游文档蒸馏稿
-└── tools/               check_paper.py（合规自查）、check_numbers.py（数字对拍）
+├── notes/               写作交底、数值台账、上游文档蒸馏稿、F 对照稿审查、G 优化方案
+└── tools/               check_paper.py（合规自查）、check_numbers.py（数字对拍）、
+                        verify_ref.py（对照稿反算，只读）、package_support.sh（打包）
 ```
 
 ---
@@ -75,29 +98,52 @@ C题论文/
 
 | 项目 | 实测值 | 要求 | 结论 |
 |---|---|---|---|
-| PDF 总页数 | 88 | — | — |
+| `main.pdf`（正文册） | 24 页 = 摘要 1 + 正文 23 + 参考文献 | 摘要 ≤1、正文 ≤30、无目录 | 合规 |
 | 摘要页 | 1 | ≤1 | 合规 |
-| 正文（一章至十章） | 29 | ≤30 | 合规 |
-| 参考文献 | 1 | — | 合规 |
-| 附录 A–J | 57 | 不限 | 合规 |
-| 电子版大小 | 1.5 MB | ≤20 MB | 合规 |
+| `appendix.pdf`（附录册） | 105 页，附录 A--O，含全部源程序 | 附录页数不限、须打印装订 | 合规 |
+| 正文册是否混入附录 | 否（自动检查「附录A」「支撑材料文件清单」「源程序：code/」均不出现） | 正文不含代码 | 合规 |
+| 正文（第一章至第十章） | 23 | ≤30 | 合规（余量 7 页） |
+| 参考文献 | 与正文同末页 | — | 合规 |
+| 正文中的源程序 | 0（源程序只在附录 E，正文不含代码） | 正文不含代码 | 合规 |
+| 未定义交叉引用 | 0（`main.pdf` 全文无 `??`） | 0 | 合规（新增机械检查） |
+| 电子版大小 | 0.9 / 1.6 / 2.1 MB（main / appendix / full） | ≤20 MB | 合规 |
 | 目录 | 无 | 不得有 | 合规 |
 | 身份信息 | 无 | 不得出现 | 合规 |
 | 占位符 | 0 | 0 | 合规 |
-| 附录源程序 | 16 个文件 | 全部可运行 | 合规 |
-| 未定义引用 | 0 | 0 | 合规 |
+| 附录源程序 | 24 个文件（23 个 .py + requirements.txt） | 全部可运行 | 合规 |
+| 未定义引用 | 0（三册 PDF 逐册检查 + 源码层双查，见下） | 0 | 合规 |
+| 行文风格机械项 | 术语统一、无硬编码章号、表注体例统一、无 ≥150 字长句 | — | 合规 |
 
 ```text
 $ python3 tools/check_paper.py --strict
-  结论：全部机械检查通过（0 项注意需人工确认）
-$ python3 tools/audit.py          # 独立审计 A1–A10
+  结论：全部机械检查通过（0 项注意）
+    · 占位符 0、身份信息 0、目录 0、插图齐备、附录源程序 24 个齐备
+    · 电子版 0.9 MB ≤20 MB；第 1 页为摘要页；正文 23 页 ≤30，附录自第 25 页起
+    · 交叉引用：正文 118 个标签全部可解析；指向附录的引用全走 \appref；main.pdf 全文无「??」
+    · 行文风格：无「完美信息/完全信息」混用、无硬编码章号、表注体例统一、引号统一、无 ≥150 字长句
+$ python3 tools/verify_ref.py        # 对照稿红队审查的全部反算断言（只读）
+$ python3 tools/audit.py             # 独立审计 A1–A10
   供给缺口 3.41e-13 kWh；SOC 递推 1.09e-11 kWh；越界/互斥/负购电 = 0；
-  费用复算相对误差 0；交付物块级残差 ≤2.96e-4 kWh（四位小数取整上界 7.0e-4）
+  费用复算相对误差 ≤1e-6；交付物块级残差 ≤2.96e-4 kWh（四位小数取整上界 7.0e-4）
 ```
+
+### 本轮修订的七项机制性改动（防止同类问题复发）
+
+| # | 改动 | 原因 |
+|---|---|---|
+| 1 | 新增 `\appref{label}{备用文字}` 宏（`preamble.tex`） | 正文有一批引用指向附录标签；`main.tex` 不载入附录时它们全部渲染成 `??`。宏在附录模式下输出真实编号，否则输出备用文字 |
+| 2 | 交付形态拆为三册：`main.tex`（正文）、新增 `appendix.tex`（附录）、`full.tex`（合并版）；`build.sh` 一个命令编全部三册 | 正文单独一册、附录单独一册；`build.sh` 内已固定 main → appendix → full 的顺序 |
+| 2b | 新增 `\bref` 宏：附录回指正文时输出"正文表 20 / 正文式 (2a) / 正文第 3.7 节" | 附录单独成册时正文编号不在本文件内；`appendix.tex` 用 `xr` 读 `build/main.aux` 取真实编号，39 处引用全部可解析 |
+| 3 | 新增 `\chapref{label}` 宏，正文 25 处硬编码「第X章」全部改为 `\chapref` | 硬编码章号在增删章节后必然失配 |
+| 4 | 符号说明表从附附录 H 移回正文 §2.3 | 写作需求要求"完整符号表含单位"且"公式中每个符号都必须在符号表中出现"；此前公式里的对偶变量在正文无定义 |
+| 6 | 正文大幅精简 + 数学化改写：正文 27 → **23 页**；散文句中位数 113 → **39 字**、>150 字长句 22 → **0 句**；逐问给出编号式（式 (1)--(40)）替代文字描述 | 原稿每句平均承载 2--3 个独立事实、绝对谓语密集；现改为"一句一个判断 + 公式承载关系" |
+| 7 | 三张明细表（相关系数三尺度、预报误差分档、情景保真度）移入附录 H，正文留结论与指引 | 正文优先容纳题面要求的格式表（表 1／表 2／表 3） |
+| 5 | `check_paper.py` 新增三项检查：`check_deliverables()`（三册齐备、大小、无 `??`、正文册不得混入附录/源程序）、`check_refs()`（源码层未定义引用 / 裸 `\ref` 跨入附录 / 三册 PDF 逐个查 `??`）、`check_style()`（术语混用、硬编码章号、表注体例、直引号、≥150 字长句） | 原检查项不含引用完整性，导致"未定义引用 0"是假阳性 |
 
 ## 六、复现与对拍
 
-- 一键复现：`python3 code/run_all.py`（约 5 分钟；`--fast` 跳过对照实验）；
+- 一键复现：`python3 code/run_all.py`（约 15 分钟，含 v2 四组对照；`--fast` 跳过对照实验）；
 - 独立审计：`python3 code/audit.py`（从**结果文件**与原始附件复算，不调用建模费用函数）；
 - 数值台账：`python3 code/paper_numbers.py` → `intermediate/paper_numbers.json` 与 `notes/数值台账.md`；
-- 支撑材料：`./tools/package_support.sh` → `support.zip`（2.3 MB，52 个文件）。
+- 支撑材料：`./tools/package_support.sh` → `support.zip`（3.2 MB，92 个文件：含论文源文件、sections/、tools/、v2 新增脚本与四组对照 JSON）；
+- 完整版（正文 \(+\) 附录）：`tectonic -X compile full.tex --outdir build`（或 `xelatex full.tex` 连编两遍）→ `full.pdf`。

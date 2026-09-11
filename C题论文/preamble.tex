@@ -27,10 +27,10 @@
 % 段间距为 0（中文论文用首行缩进分段）；浮动体与标题间距一并收紧，
 % 以便正文容纳更多内容而不牺牲可读性
 \setlength{\parskip}{0pt}
-\setlength{\textfloatsep}{9pt plus 2pt minus 2pt}
-\setlength{\intextsep}{9pt plus 2pt minus 2pt}
-\setlength{\floatsep}{9pt plus 2pt minus 2pt}
-\setlength{\abovecaptionskip}{4pt}
+\setlength{\textfloatsep}{7pt plus 2pt minus 2pt}
+\setlength{\intextsep}{7pt plus 2pt minus 2pt}
+\setlength{\floatsep}{7pt plus 2pt minus 2pt}
+\setlength{\abovecaptionskip}{3pt}
 \setlength{\belowcaptionskip}{0pt}
 
 % ---------------------------------------------------------------------------
@@ -58,8 +58,8 @@
 % booktabs 的横线间距一并收紧，减少表格占用的纵向空间
 \usepackage{booktabs,longtable,tabularx,array,multirow,makecell}
 \setlength{\tabcolsep}{4pt}
-\setlength{\abovedisplayskip}{4pt plus 2pt minus 2pt}
-\setlength{\belowdisplayskip}{4pt plus 2pt minus 2pt}
+\setlength{\abovedisplayskip}{3pt plus 1pt minus 1pt}
+\setlength{\belowdisplayskip}{3pt plus 1pt minus 1pt}
 \setlength{\abovedisplayshortskip}{2pt plus 1pt}
 \setlength{\belowdisplayshortskip}{2pt plus 1pt}
 \setlength{\aboverulesep}{0.18ex}
@@ -67,7 +67,7 @@
 \newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
 \newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
 \newcolumntype{Y}{>{\centering\arraybackslash}X}
-\renewcommand{\arraystretch}{0.95}
+\renewcommand{\arraystretch}{0.90}
 % 浮动体（图/表）排布参数：本文图表较多，放宽参数可显著减少"半空页"
 \usepackage{graphicx}
 \setcounter{topnumber}{5}
@@ -80,7 +80,7 @@
 \renewcommand{\dbltopfraction}{0.92}
 
 \usepackage{subcaption}
-\usepackage[font=small,labelsep=quad,skip=4pt]{caption}
+\usepackage[font=footnotesize,labelsep=quad,skip=3pt]{caption}
 \usepackage{enumitem}
 \setlist{nosep,leftmargin=2.2em}
 \usepackage{xcolor}
@@ -114,19 +114,19 @@
 % ---------------------------------------------------------------------------
 \ctexset{
   section = {
-    format     = \zihao{3}\heiti\centering,
+    format     = \zihao{4}\heiti\centering,
     name       = {,、},
     number     = \chinese{section},
     aftername  = {},
-    beforeskip = 1.2ex plus .4ex minus .2ex,
-    afterskip  = 0.8ex plus .2ex,
+    beforeskip = 0.9ex plus .3ex minus .2ex,
+    afterskip  = 0.6ex plus .2ex,
   },
   subsection = {
-    format     = \zihao{4}\heiti\raggedright,
+    format     = \zihao{-4}\heiti\raggedright,
     number     = \arabic{section}.\arabic{subsection},
     aftername  = \quad,
-    beforeskip = 1.0ex plus .4ex minus .2ex,
-    afterskip  = 0.5ex plus .2ex,
+    beforeskip = 0.8ex plus .3ex minus .2ex,
+    afterskip  = 0.4ex plus .2ex,
   },
   subsubsection = {
     format     = \zihao{-4}\heiti\raggedright,
@@ -214,6 +214,23 @@
 
 \usepackage{environ}
 
+% ---------------------------------------------------------------------------
+% 8b. 附录引用：\appref{label}{附录字母}
+%     正文有一批引用指向附录（口径定义、对照实验明细、明细表等）。
+%     main.pdf 与 full.pdf 都必须能编过，且\textbf{不得出现 ??}：
+%       - \ifappendixmode 为真   （full.tex / main.tex 已 \input 附录）
+%             -> 走真实 \ref，自动取到附录字母
+%       - \ifappendixmode 为假   （只编正文的单文件交付物）
+%             -> 原样输出备用文字（如「附录 H」），不产生未定义引用
+%     维护约定：正文引用附录一律用 \appref，禁止直接 \ref{附录内的标签}。
+% ---------------------------------------------------------------------------
+\newif\ifappendixmode
+\appendixmodefalse
+\newcommand{\appref}[2]{%
+  \ifappendixmode\ref{#1}%
+  \else #2\fi}
+
+
 % 带圈数字（①②③…）、罗马数字等符号在默认字体分类下会被交给西文字体而缺字，
 % 这里把它们划入 CJK 字符类，交给中文字体排版（仅 XeLaTeX + xeCJK 生效）
 \ifdefined\xeCJKsetcharclass
@@ -290,3 +307,50 @@
 
 % 正文中引用题面表格
 \newcommand{\tabref}[1]{表~#1}
+
+% 章引用：\chapref{label} -> 「第 9 章」。用于避免硬编码「第九章」；
+% 章号随 \section 自动跟随，改章序不会失配。
+\newcommand{\chapref}[1]{第\,\ref{#1}\,章}
+
+% ---------------------------------------------------------------------------
+% 8c. 附录引用正文：\bref{label}
+%     附录里需要回指正文的表、图、公式、命题与小节（"见正文表 20"）。
+%     交付形态是三个 PDF：
+%        main.pdf      摘要 + 正文 + 参考文献（正文 ≤30 页，不含源程序）
+%        appendix.pdf  附录 A--O（独立文件，页数不限，含全部源程序）
+%        full.pdf      正文 + 附录合并版（备用）
+%     在 appendix.pdf 里正文的编号并不存在，故 \bref 需要由入口文件定义：
+%        main.tex / 正文：不涉及（正文不用 \bref）
+%        full.tex       ：\bref 直接取真实 \ref（正文编号就排在同一文件里）
+%        appendix.tex   ：\bref 输出"正文表 20 / 正文式 (2a) / 正文第 3.7 节"
+%                         （用 xr 宏包读 build/main.aux 取真实编号，见该文件导言区）
+%     默认实现取真实 \ref，未定义时退化为标签名，保证永远不会出现 ??。
+% ---------------------------------------------------------------------------
+\providecommand{\bref}[1]{\ref{#1}}
+
+% 附录单独成册时，附录里的 \cite 需要参考文献表；此宏给出该表的标题
+% （与正文那份内容相同，只为让引用可解析；装订时以正文末页那份为准）。
+% ---------------------------------------------------------------------------
+% 8d. 附录单独成册时读取正文编号
+%     做法：附录入口用 xr 宏包把 main.aux 的标签重新定义成 b-<标签>，再用 \bref 输出
+%     「正文表 20」「第 3.7 节」这类带前缀的引用。正文与附录同名标签不会互相覆盖，
+%     因为两条标签名不同（一个是 tab:summary，一个是 b-tab:summary）。
+%     前置条件：先编译 main.tex 生成 build/main.aux。
+% ---------------------------------------------------------------------------
+% 附录单独成册时的页码对齐：读 xr 引入的 b-pg:bodyend（正文末页号），再 +1。
+% 用一个临时计数器承接 \ref 的阿拉伯数字，避免 \setcounter 直接吃 \ref 展开。
+\makeatletter
+\newcounter{bodyendpage@}
+\newcommand{\appendixpagefrom}[1]{%
+  \ifcsname r@b-#1\endcsname
+    \setcounter{bodyendpage@}{\ref{b-#1}}%
+    \setcounter{page}{\value{bodyendpage@}}%
+    \stepcounter{page}%
+  \fi}
+\makeatother
+
+\newcommand{\appendixbib}{%
+  \begin{center}{\heiti 参考文献（与正文同表，此处重排以便附录引用可查）}\end{center}%
+  \vspace{-1.2ex}%
+}
+

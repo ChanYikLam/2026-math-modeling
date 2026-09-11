@@ -24,6 +24,14 @@ STEPS = [
     ("独立审计（A1–A10）", [sys.executable, "audit.py"]),
     ("汇总论文数值台账", [sys.executable, "paper_numbers.py"]),
 ]
+V2_EXTRA = [
+    ("v2 相依结构：C 藤 pair-Copula 拟合与生成器样本外对照、分时段 CVaR 风险画像", [sys.executable, "exp_copula.py"]),
+    ("v2 对照：机会约束（安全边际分位数扫描与报童互证）", [sys.executable, "exp_chance.py"]),
+    ("v2 对照：盒式分布鲁棒（保守度—费用曲线）", [sys.executable, "exp_dro.py"]),
+    ("v2 求解工程：L 形（Benders）分解与直接求解对拍", [sys.executable, "decomp.py"]),
+    ("v2 图件：相依结构/生成器对照/风险画像/鲁棒前沿/分解", [sys.executable, "plot_figures_v2.py"]),
+    ("假设 A9 量化：负载预报误差敏感性（相对 MAE 0%/5%/10%）", [sys.executable, "exp_loaderr.py"]),
+]
 FAST_EXTRA = [
     ("问题 2 对照：完美信息 R1", [sys.executable, "q2.py", "--tag", "cmp_R1", "--K", "60", "--scen", "strat", "--info", "R1"]),
     ("问题 2 对照：典型日预报 R2", [sys.executable, "q2.py", "--tag", "cmp_R2", "--K", "60", "--scen", "strat", "--info", "R2"]),
@@ -55,6 +63,8 @@ def main():
         run(name, cmd)
     if not args.fast:
         for name, cmd in FAST_EXTRA:
+            run(name, cmd)
+        for name, cmd in V2_EXTRA:
             run(name, cmd)
     print("=" * 78)
     print(f"全部完成，总耗时 {time.time()-t0:.1f}s。结果文件在 ../results/，中间结果在 ../intermediate/。")

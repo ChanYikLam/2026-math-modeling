@@ -19,27 +19,85 @@
 \renewcommand{\refname}{参考文献}
 
 \begin{thebibliography}{99}
-  \setlength{\itemsep}{2pt}
+  \footnotesize
+  \setlength{\itemsep}{1pt}
 
   \bibitem{ref136}
   国家发展改革委, 国家能源局.
   关于深化新能源上网电价市场化改革~促进新能源高质量发展的通知:
   发改价格〔2025〕136号[Z]. 2025-01-27.
-  \url{https://www.gov.cn/zhengce/zhengceku/202502/content_7002959.htm}
-  \note{正文第一章引用；发文机关、文号与成文日期按中国政府网「国务院部门文件」栏目核对（2026-09-10）}
+  \note{正文问题重述与分析一章引用；发文机关、文号与成文日期按中国政府网「国务院部门文件」栏目核对（2026-09-10）}
 
   \bibitem{ref1093}
   国家发展改革委.
   关于进一步完善分时电价机制的通知:
   发改价格〔2021〕1093号[Z]. 2021-07-26.
-  \url{https://www.gov.cn/zhengce/zhengceku/2021-07/29/content_5628297.htm}
   \note{分时电价的时段划分与峰谷价差机制出处；本文用于分时电价骨架与峰谷价比的背景说明}
 
   \bibitem{ref1217}
   国家发展改革委, 国家能源局.
   电力现货市场基本规则（试行）:
   发改能源规〔2023〕1217号[Z]. 2023-09-07.
-  \url{https://www.gov.cn/zhengce/zhengceku/202309/content_6904881.htm}
   \note{「日前计划与实时偏差」结算机制的政策原型；本文问题 2、3 的信息结构与偏差定价口径参考此机制}
+
+  \bibitem{refningnan}
+  宁楠, 范俊秋, 徐潘宇驰, 程培军, 林盛振, 谢敏.
+  基于动态C藤pair-Copula的电力系统动态经济调度场景协同优化算法[J].
+  电力大数据, 2021, 24(4): 26--34.
+  \note{藤 Copula 逐层二元建模与选族思路的出处；本文 \ref{sec:vine} 的 C 藤结构与按 AIC/经验 Copula 距离选族参考此文；终页 34/35 存疑}
+
+  \bibitem{refcuimin}
+  崔丽敏, 马志远, 陈星, 刘祎芳, 张浩楠.
+  基于核密度估计和Copula函数的风-光-荷联合场景生成[J].
+  煤炭经济研究, 2026, 46(4): 153--161.
+  \note{核密度边缘 $+$ Copula 相依 $+$ 蒙特卡洛抽样的轻量实现路线；本文 \ref{sec:vine}、\appref{sec:q4-gen}{F 情景生成对照} 的联合情景生成对照参考此文}
+
+  \bibitem{refzengming}
+  曾鸣, 李晨, 王致杰, 魏阳, 董军.
+  基于CVaR报童模型的风力发电商最优投标策略[J].
+  电力系统保护与控制, 2012, 40(24): 14--20.
+  \note{报童模型 $+$ CVaR 刻画“超额浪费/缺额惩罚”不对称成本的出处；本文 \ref{sec:q2-newsvendor} 的临界分位数 $F^*=c_u/(c_u+c_o)$ 与 \ref{sec:sens} 的上下界对照参考此文}
+
+  \bibitem{refchenhan}
+  陈寒, 唐忠, 鲁家阳, 梅光银, 李征南, 史晨豪.
+  基于CVaR量化不确定性的微电网优化调度研究[J].
+  电力系统保护与控制, 2021, 49(5): 105--115.
+  \note{把 CVaR 风险成本嵌入微网优化调度、在费用与风险之间取舍的做法；本文 \ref{sec:q4-frontier} 的风险—费用前沿参考此文}
+
+  \bibitem{refwangtaiqiang}
+  王泰强, 项意凌, 石京, 李兵抗.
+  新能源发电企业参与电力市场交易的风险管理创新应用——基于电力期货与CVaR的视角[J].
+  应用能源技术, 2026(4): 109--111.
+  \note{电价与电量双重不确定性下“分时段 CVaR 风险画像”的做法；本文附录 \appref{sec:q4-risk}{F 分时段风险画像} 的逐时段风险画像参考此文}
+
+  \bibitem{refrockafellar}
+  ROCKAFELLAR R T, URYASEV S.
+  Optimization of conditional value-at-risk[J].
+  The Journal of Risk, 2000, 2(3): 21--41.
+  \note{CVaR 的 Rockafellar--Uryasev 线性化形式；本文 \ref{sec:q4-frontier} 的 CVaR 线性化的出处}
+
+  \bibitem{refyuhaodong}
+  俞昊东, 廖立志, 孙捷.
+  求解含非离散分布的分布鲁棒多阶段线性随机规划的Benders分解-动态逼近方法[J].
+  中国科学: 数学, 2025, 55(2): 361--384.
+  \note{矩约束模糊集下的分布鲁棒多阶段建模与 Benders 动态逼近；本文附录 \appref{sec:q4-dro}{F 分布鲁棒对照} 的鲁棒对照与 \S10.4 的推广讨论参考此文}
+
+  \bibitem{reffullner}
+  FÜLLNER C, REBENNACK S.
+  Stochastic dual dynamic programming and its variants: a review[J].
+  SIAM Review, 2025, 67(3): 415--539.
+  \note{多阶段随机规划（SDDP）的理论框架与风险规避扩展；本文 \ref{sec:voi} 关于“滚动时域决策的理论根源”的讨论参考此文}
+
+  \bibitem{reflixiang}
+  李翔, 顾洁.
+  运用聚类算法预测地区电网典型日负荷曲线[J].
+  电力与能源, 2013, 34(1): 47--50.
+  \note{聚类式典型日/代表样本提取与最优聚类数确定；本文 \ref{sec:q2-scen}、\appref{sec:q4-gen}{F 情景生成对照} 的场景削减对照参考此文}
+
+  \bibitem{refzhangzt}
+  张振涛.
+  基于机会约束规划的微电网源荷储协调优化调度[J].
+  电气技术与经济, 2024(8): 181--184.
+  \note{把“不允许缺电”放松为“缺电概率不超过 $\beta$”的机会约束建模；本文 \ref{sec:q2-chance} 的机会约束对照参考此文}
 
 \end{thebibliography}

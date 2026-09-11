@@ -1,0 +1,48 @@
+%!TEX program = xelatex
+% =============================================================================
+%  appendix.tex —— 附录单独成册的入口，产出 appendix.pdf
+%
+%  交付形态（三个 PDF，共用同一套 sections/）
+%    main.pdf      摘要页 + 正文 + 参考文献      （正文 ≤30 页，不含任何源程序）
+%    appendix.pdf  附录 A--O                     （页数不限，含全部源程序）← 本文件
+%    full.pdf      正文 + 附录合并版              （备用，由 full.tex 产出）
+%
+%  重要：附录里有 40 余处回指正文的表、图、公式、命题与小节。附录单独编译时正文的
+%  编号不在本文件里，因此这里做两件事：
+%    ① \usepackage{xr} + \externaldocument 读 build/main.aux，拿到正文的真实编号；
+%    ② 用 \bref 输出"正文表 20"这类带前缀的引用（见 preamble.tex §8c/§8d）。
+%  前置条件：先成功编译一次 main.tex（生成 build/main.aux 与 main.pdf）。
+%  \bref 在标签取不到时退化为标签名，任何情况下都不会出现 ??。
+%
+%  编译：tectonic -X compile appendix.tex --outdir build   （或 xelatex 连编两遍）
+% =============================================================================
+\documentclass[10pt,a4paper]{ctexart}
+\input{preamble}
+
+% 读取正文的编号：xr 把 main.aux 的标签重新定义成 b-<标签>（见 preamble.tex §8d）
+\usepackage{xr}
+\IfFileExists{build/main.aux}{\externaldocument[b-]{build/main}}{\externaldocument[b-]{main}}
+% 正文末页号另由 \setappendixpage 从 build/main.aux 直接读出
+
+% \bref：附录里回指正文（正文编号由 xr 取自 main.aux，"b-" 是 xr 的外部引用前缀）
+\renewcommand{\bref}[1]{正文\ref{b-#1}}
+
+% 页码：与正文合订时附录自正文末页之后起算。
+% 正文末页号由 refcount 从 xr 引入的 b-pg:bodyend 取到；取不到时保持本文件页码不变。
+\newcommand{\setappendixpage}{\appendixpagefrom{build/main.aux}}
+
+\begin{document}
+
+% 附录里的 \cite 指向正文的参考文献表，故载入同一份 refs.tex。
+% 参考文献在正文里已排过一次；此处重复只为让附录的引用可查，
+% 装订时以正文末页那一份为准。
+\appendixbib
+\input{sections/refs}
+\clearpage
+
+\setappendixpage
+\appendix
+\ctexset{section={name={附录\,},number=\Alph{section},aftername=\quad}}
+\input{sections/90_appendix}
+
+\end{document}

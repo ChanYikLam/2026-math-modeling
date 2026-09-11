@@ -132,6 +132,15 @@ def main():
     N["审计"] = audit
     cvar = load("q4_cvar.json")
     N["CVaR前沿"] = cvar["frontier"] if cvar else None
+    # ---- v2 新增实验（相依结构/生成器对照/风险画像/机会约束/盒式鲁棒/L 形分解）----
+    v2cop = load("exp_copula.json")
+    v2chance = load("exp_chance.json")
+    v2dro = load("exp_dro.json")
+    v2dec = load("decomp.json")
+    N["v2相依结构与生成器对照"] = v2cop
+    N["v2机会约束"] = v2chance
+    N["v2盒式鲁棒"] = v2dro
+    N["v2L形分解"] = v2dec
 
     with open(os.path.join(INT, "paper_numbers.json"), "w") as fh:
         json.dump(N, fh, ensure_ascii=False, indent=1, default=str)
@@ -239,6 +248,76 @@ def main():
         if q3[t]:
             L.append(f"| {name} | {q3[t]['meta']['total_cost']:,.2f} | {q3[t]['meta']['emg_qty']:,.2f} |")
     L.append("")
+    L.append("## 五、v2 新增对照实验")
+    L.append("")
+    if v2cop:
+        p1 = v2cop["part1_vine"]
+        L.append("| C 藤 pair-Copula（334 个日水平观测） | 数值 |")
+        L.append("|---|---|")
+        for nm, key in (("tau(电价,负载)", "tau_price_load"), ("tau(电价,光伏)", "tau_price_pv"),
+                        ("tau(负载,光伏)", "tau_load_pv"),
+                        ("Pearson(电价,负载)", "pearson_price_load"),
+                        ("Pearson(电价,光伏)", "pearson_price_pv")):
+            L.append(f"| {nm} | {p1['plain'][key]:+.4f} |")
+        for r in p1["vine"]:
+            L.append(f"| {r['name']}：最优族 / tau / lambdaU / AIC | {r['best']} / "
+                     f"{r['tau_emp']:+.4f} / {r['tail'][0]:.4f} / {r['aic']:.2f} |")
+        p3 = v2cop["part3_generators"]
+        L.append("")
+        L.append("四种情景生成器的样本外对照（训练 2025-02-01 至 06-30，测试 07-01 至 12-31，184 天）：")
+        L.append("")
+        L.append("| 生成器 | 总费用 元 | 相对差 | 紧急购电量 kWh | 逐日 CVaR95 元 |")
+        L.append("|---|---|---|---|---|")
+        for k, nm in (("hist_strat", "历史代表日"), ("bootstrap", "分块 Bootstrap"),
+                      ("copula", "KDE+Copula"), ("scaled", "按光伏规模缩放")):
+            d = p3[k]
+            L.append(f"| {nm} | {d['total_cost']:,.2f} | {d.get('diff_pct', 0.0):+.3f}% | "
+                     f"{d['emg_qty']:,.2f} | {d['cvar95']:,.2f} |")
+        p4 = v2cop["part4_risk"]
+        L.append("")
+        L.append(f"分时段 CVaR 风险画像（alpha={p4['alpha']}）：问题 2 逐槽 CVaR 之和/均值之和 "
+                 f"{p4['q2_cvar_over_mean']:.4f}，前 12 槽占比 {p4['q2_top12_slot_share']:.4f}；"
+                 f"问题 4-2 {p4['q4_cvar_over_mean']:.4f} / {p4['q4_top12_slot_share']:.4f}。")
+        L.append("")
+    if v2chance:
+        L.append("机会约束对照（固定价 334 天）：")
+        L.append("")
+        L.append("| beta | 总费用 元 | 紧急购电量 kWh | 缺电槽位频率 | 逐日 CVaR95 元 |")
+        L.append("|---|---|---|---|---|")
+        for r in v2chance["chance"]:
+            L.append(f"| {r['beta']:.2f} | {r['tot_cost']:,.2f} | {r['tot_emg_qty']:,.2f} | "
+                     f"{r['shortfall_slot_freq']*100:.2f}% | {r['cvar95']:,.2f} |")
+        sp = v2chance["reference_sp"]
+        L.append(f"| 两阶段随机规划（主方案） | {sp['tot_cost']:,.2f} | {sp['tot_emg_qty']:,.2f} | "
+                 f"{sp['shortfall_slot_freq']*100:.2f}% | {sp['cvar95']:,.2f} |")
+        L.append("")
+    if v2dro:
+        L.append("盒式分布鲁棒对照（波动价 334 天回测）：")
+        L.append("")
+        L.append("| k | 回测总费用 元 | 节省率 | 紧急购电量 kWh | 逐日 CVaR95 元 |")
+        L.append("|---|---|---|---|---|")
+        res = v2dro["results"]
+        ks = sorted(res, key=lambda s: float(s.split("=")[-1]))
+        for k in ks:
+            d = res[k]
+            L.append(f"| {k.split('=')[-1]} | {d['total_cost']:,.2f} | {d['saving']*100:+.2f}% | "
+                     f"{d['emg_qty']:,.2f} | {d['cvar95']:,.2f} |")
+        L.append("")
+    if v2dec:
+        e = v2dec["equivalence_K60"]
+        L.append(f"L 形（Benders）分解对拍：K=60 在 {e['n']} 天上最大相对间隙 {e['max_rel_gap']:.2e}，"
+                 f"平均迭代 {e['mean_iters']:.2f} 次，全部收敛={e['all_converged']}；"
+                 f"直接求解 {e['sum_t_direct']:.2f} s，分解 {e['sum_t_benders']:.2f} s。")
+        L.append("")
+        L.append("| 情景数 K | 直接求解耗时 s | L 形分解耗时 s | 加速比 | 最大相对间隙 |")
+        L.append("|---|---|---|---|---|")
+        for ent in v2dec["scenario_scan"]["entries"]:
+            rows = ent["rows"]
+            td = sum(r.get("t_direct_total", r.get("t_direct_production", 0.0)) for r in rows)
+            tb = sum(r.get("t_benders_total", 0.0) for r in rows)
+            L.append(f"| {ent['K']} | {td:.3f} | {tb:.3f} | {td/tb:.2f}x | "
+                     f"{max(r['rel_gap'] for r in rows):.2e} |")
+        L.append("")
     with open(os.path.join(NOTES, "数值台账.md"), "w") as fh:
         fh.write("\n".join(L))
     print("\n".join(L))

@@ -2,9 +2,12 @@
 # =============================================================================
 #  build.sh —— 编译 C 题论文
 #  用法：
-#     ./build.sh              # 正常编译（自动选择可用引擎）
+#     ./build.sh              # 编译三个交付物：main.pdf / appendix.pdf / full.pdf
+#     ./build.sh main         # 只编正文（main.pdf，≤30 页、不含源程序）
+#     ./build.sh appendix     # 只编附录（appendix.pdf，页数不限、含全部源程序）
+#     ./build.sh full         # 只编合并版（full.pdf = 正文 + 附录，备用）
 #     ./build.sh clean        # 清理中间文件
-#     ./build.sh check        # 编译后运行提交前合规自查
+#     ./build.sh check        # 三个都编 + 运行提交前合规自查
 #
 #  支持的引擎（按优先级自动探测）：
 #     1) latexmk + xelatex   （TeX Live / MacTeX 完整安装，推荐）
@@ -24,54 +27,80 @@ clean() {
   echo "已清理中间文件"
 }
 
-compile_latexmk() {
-  echo ">>> 使用 latexmk + xelatex 编译"
+compile_latexmk() {          # $1 = job 名（main / appendix / full）
+  local job="${1:-$JOB}"
+  echo ">>> 使用 latexmk + xelatex 编译 $job"
+  # 附录单独编译时要读正文的辅助文件，故附录必须在 main 之后编
   latexmk -xelatex -interaction=nonstopmode -halt-on-error \
-          -outdir="$BUILD_DIR" "$JOB.tex"
-  cp -f "$BUILD_DIR/$JOB.pdf" "$JOB.pdf"
+          -outdir="$BUILD_DIR" "$job.tex"
+  cp -f "$BUILD_DIR/$job.pdf" "$job.pdf"
 }
 
-compile_xelatex() {
-  echo ">>> 使用 xelatex 编译（连编两遍）"
-  xelatex -interaction=nonstopmode -halt-on-error -output-directory="$BUILD_DIR" "$JOB.tex"
-  xelatex -interaction=nonstopmode -halt-on-error -output-directory="$BUILD_DIR" "$JOB.tex"
-  cp -f "$BUILD_DIR/$JOB.pdf" "$JOB.pdf"
+compile_xelatex() {          # $1 = job 名
+  local job="${1:-$JOB}"
+  echo ">>> 使用 xelatex 编译 $job（连编两遍）"
+  xelatex -interaction=nonstopmode -halt-on-error -output-directory="$BUILD_DIR" "$job.tex"
+  xelatex -interaction=nonstopmode -halt-on-error -output-directory="$BUILD_DIR" "$job.tex"
+  cp -f "$BUILD_DIR/$job.pdf" "$job.pdf"
 }
 
-compile_tectonic() {
-  echo ">>> 使用 tectonic 编译"
+compile_tectonic() {         # $1 = job 名
+  local job="${1:-$JOB}"
+  echo ">>> 使用 tectonic 编译 $job"
   # tectonic 默认把缓存写到 ~/Library/Caches，受限环境下会失败，故显式指定可写目录
   export TECTONIC_CACHE_DIR="${TECTONIC_CACHE_DIR:-$PWD/$BUILD_DIR/.tectonic-cache}"
-  tectonic -X compile "$JOB.tex" --outdir "$BUILD_DIR" \
+  tectonic -X compile "$job.tex" --outdir "$BUILD_DIR" \
     --keep-intermediates --keep-logs
-  cp -f "$BUILD_DIR/$JOB.pdf" "$JOB.pdf"
+  cp -f "$BUILD_DIR/$job.pdf" "$job.pdf"
 }
 
-case "${1:-build}" in
-  clean) clean; exit 0 ;;
-  build|check) ;;
-  *) echo "未知参数：$1（可用：build / clean / check）"; exit 2 ;;
-esac
-
+# 选择一个可用引擎，作为函数 compile_one(job)
 if command -v latexmk >/dev/null 2>&1 && command -v xelatex >/dev/null 2>&1; then
-  compile_latexmk
+  compile_one() { compile_latexmk "$1"; }
 elif command -v xelatex >/dev/null 2>&1; then
-  compile_xelatex
+  compile_one() { compile_xelatex "$1"; }
 elif command -v tectonic >/dev/null 2>&1; then
-  compile_tectonic
+  compile_one() { compile_tectonic "$1"; }
 else
   echo "错误：未找到 xelatex / latexmk / tectonic，请先安装 TeX Live（含 ctex 宏包）" >&2
   exit 1
 fi
 
+report() {                    # 打印某个交付物的页数与大小
+  local f="$1" label="$2"
+  [ -f "$f" ] || return 0
+  if command -v pdfinfo >/dev/null 2>&1; then
+    local pages size
+    pages=$(pdfinfo "$f" | awk '/^Pages:/{print $2}')
+    size=$(du -h "$f" | cut -f1)
+    printf '    %-14s %4s 页  %6s   %s\n' "$f" "$pages" "$size" "$label"
+  fi
+}
+
+case "${1:-build}" in
+  clean) clean; exit 0 ;;
+  build)
+    # 顺序有依赖：appendix.tex 用 xr 读 build/main.aux 取正文编号，必须后编
+    compile_one main
+    compile_one appendix
+    compile_one full
+    ;;
+  main)     compile_one main ;;
+  appendix) compile_one appendix ;;
+  full)     compile_one full ;;
+  check)
+    compile_one main
+    compile_one appendix
+    compile_one full
+    ;;
+  *) echo "未知参数：$1（可用：build / main / appendix / full / clean / check）"; exit 2 ;;
+esac
+
 echo
-echo "编译完成：$JOB.pdf"
-if command -v pdfinfo >/dev/null 2>&1; then
-  PAGES=$(pdfinfo "$JOB.pdf" | awk '/^Pages:/{print $2}')
-  SIZE=$(du -h "$JOB.pdf" | cut -f1)
-  echo "总页数：$PAGES （含摘要页与附录；正文页数上限 30 页，附录页数不限）"
-  echo "文件大小：$SIZE （电子版上限 20 MB）"
-fi
+echo "编译完成。交付物："
+report main.pdf     "正文（摘要 + 正文 + 参考文献；正文上限 30 页、不含源程序）"
+report appendix.pdf "附录（A--O；页数不限，含全部源程序，需与正文一起装订）"
+report full.pdf     "合并版（正文 + 附录，备用）"
 
 if [ "${1:-build}" = "check" ]; then
   echo

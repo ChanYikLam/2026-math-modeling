@@ -110,10 +110,14 @@ C题论文/
 ├── results/             五个结果文件
 ├── intermediate/        求解输出 JSON、审计报告、数值台账 JSON
 ├── notes/               写作交底、数值台账、上游文档蒸馏稿、F 对照稿审查、G 优化方案
-└── tools/               check_paper.py（合规自查）、check_numbers.py（数字对拍）、
+└── tools/               check_paper.py（合规自查）、check_numbers.py（数字对拍，宽松/严格两档）、
                          verify_ref.py（对照稿反算，只读）、compare_refactor.py（重构前后数值对拍）、
                          package_support.sh（打包）
 ```
+
+> **数字对拍用法**：`python3 tools/check_numbers.py` 粗筛"论文数字有没有出处"；
+> `python3 tools/check_numbers.py --strict` 把相对容差压到 2e-6（千万级约 ±28 元，
+> 足以报出"口径漂移 2.1e-6"这类问题），用于主结果类数字的扫尾；`--rtol` 可自定义。
 
 ### 代码与论文的对应关系（每一问一类）
 

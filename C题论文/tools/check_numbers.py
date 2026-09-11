@@ -16,7 +16,8 @@ check_numbers.py —— 论文数字与数值台账的对拍（数字纪律 D1 �
 宽松口径的容差 max(1e-4, 5e-4·|v|) 对千万级数字意味着约 ±7 000 元——早期版本因此让
 Q3 的 28.78 元口径漂移（相对 2.1e-6）轻松通过。现在两层并存：
   * 宽松口径仍用于"有没有出处"的粗筛（历史行为，便于对照）；
-  * `--strict` 把相对容差压到 2e-5（千万级约 ±280 元），超差项单独归类为 strict_fail，
+  * `--strict` 把相对容差压到 2e-6（千万级约 ±28 元）——足以报出"口径漂移 2.1e-6"这类问题，
+    超差项单独归类为 strict_fail，
     供修订前扫尾；主结果类数字必须至少通过严格口径。
 抽取规则（消除历史伪阳性）
   * 先做 LaTeX 归一：`\\,`、`{,}`、`~`、空白、千分位逗号在**同一个数字内部**一律视为空；
@@ -138,13 +139,16 @@ def scan(vals, rtol: float, atol: float):
 def main(argv=None):
     ap = argparse.ArgumentParser(description="论文数字 vs 数值台账对拍")
     ap.add_argument("--strict", action="store_true",
-                    help="主结果类改严：rtol=2e-5、atol=0.05（千万级约 ±280 元）")
+                    help="主结果类改严：rtol=2e-6、atol=0.02（千万级约 ±28 元；可被 --rtol 覆盖）")
     ap.add_argument("--json", action="store_true", help="以 JSON 输出（机器可读）")
+    ap.add_argument("--rtol", type=float, default=None,
+                    help="自定义严格档相对容差（隐含 --strict；默认 2e-6）")
     args = ap.parse_args(argv)
 
     vals = build_ledger()
     loose = scan(vals, rtol=5e-4, atol=1e-4)
-    strict = scan(vals, rtol=2e-5, atol=0.05) if args.strict else []
+    strict_rtol = args.rtol if args.rtol is not None else 2e-6
+    strict = scan(vals, rtol=strict_rtol, atol=0.02) if (args.strict or args.rtol) else []
     strict_only = [t for t in strict if t not in loose]
 
     if args.json:
@@ -159,10 +163,13 @@ def main(argv=None):
     for f, i, raw, x in loose[:200]:
         print(f"  {f}:{i}  「{raw}」 -> {x}")
     if args.strict:
-        print(f"严格口径（rtol=2e-5）另有 {len(strict_only)} 处超差：")
+        # 严格档只报"有出处但不够精确"的项（宽松档已报的"无出处"不在此重复）
+        print(f"严格口径（rtol={strict_rtol:g}）超差：{len(strict_only)} 处（已排除上面按宽松档报过的无出处项）；"
+              f"两档合计 {len(strict)} 处")
         for f, i, raw, x in strict_only[:200]:
             print(f"  {f}:{i}  「{raw}」 -> {x}")
-        print("判定：严格口径超差项须逐条核对——主结果类数字不得依赖 5e-4 的宽容量级。")
+        print("判定：严格口径超差项须逐条核对——主结果类数字不得依赖 5e-4 的宽容量级"
+              "（本次即以 2e-6 档校准：把"真值 13 932 402.95 / 正文 13 932 431.73"这类相对 2.1e-6 的口径漂移从"漏报"变为"报出"）。")
     return 0
 
 

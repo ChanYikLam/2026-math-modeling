@@ -30,15 +30,21 @@
 \input{sections/00_abstract}
 
 % ---- 正文（≤30 页，无目录） -----------------------------------------------
-\input{sections/01_problem}
-\input{sections/02_assumptions}
-\input{sections/03_data}
-\input{sections/04_q1}
-\input{sections/05_q2}
-\input{sections/06_q3}
-\input{sections/07_q4}
+%  准备层（第 1--5 章）：一次把底座铺完，后面各问不再重复
+\input{sections/01_restate}       % 第 1 章 问题重述
+\input{sections/02_analysis}      % 第 2 章 问题分析
+\input{sections/03_data}          % 第 3 章 数据预处理与特征分析
+\input{sections/04_assumptions}   % 第 4 章 模型假设
+\input{sections/05_symbols}       % 第 5 章 符号说明
+%  问题层（第 6--9 章）：每章固定 x.1 模型建立 / x.2 求解与结果 / x.3 检验与灵敏度
+\input{sections/06_q1}
+\input{sections/07_q2}
+\input{sections/08_q3}
+\input{sections/09_q4}
+%  TODO(R0 收尾)：08_results / 09_validation 的内容正在拆入第 6--9 章的 x.2 / x.3
 \input{sections/08_results}
 \input{sections/09_validation}
+%  收尾层（第 10 章）
 \input{sections/10_evaluation}
 
 % ---- 参考文献 --------------------------------------------------------------

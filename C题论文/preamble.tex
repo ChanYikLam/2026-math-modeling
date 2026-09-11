@@ -110,14 +110,16 @@
 \renewcommand{\qedsymbol}{$\square$}
 
 % ---------------------------------------------------------------------------
-% 5. 章节标题样式：一级「一、」三号黑体居中；二级 四号黑体；三级 小四黑体
+% 5. 章节标题样式：一级「6 问题一：…」三号黑体居中；二级「6.1」四号黑体；三级「6.1.1」小四黑体
+%    一级标题用阿拉伯数字编号，与二级/三级（x.1／x.1.1）保持同一套数字，
+%    这样"准备层 1--5 章 + 问题层 6--9 章 + 收尾层 10 章"的骨架在正文中一眼可辨。
 % ---------------------------------------------------------------------------
 \ctexset{
   section = {
     format     = \zihao{4}\heiti\centering,
-    name       = {,、},
-    number     = \chinese{section},
-    aftername  = {},
+    name       = {,},
+    number     = \arabic{section},
+    aftername  = \quad,
     beforeskip = 0.9ex plus .3ex minus .2ex,
     afterskip  = 0.6ex plus .2ex,
   },
